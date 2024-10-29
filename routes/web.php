@@ -37,6 +37,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
     Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
     Route::post('/transactions/batch', [TransactionController::class, 'storeBatch'])->name('transactions.storeBatch');
+    Route::get('/transactions/summary', [TransactionController::class, 'getSummary'])->name('transactions.summary');
 
     // If you need any additional custom routes for transactions, you can add them here.
     // For example:

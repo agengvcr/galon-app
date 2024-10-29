@@ -7,8 +7,11 @@
     <button type="button" class="btn btn-primary mb-3 me-2" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
         Add New Transaction
     </button>   
-    <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#batchTransactionModal">
+    <button type="button" class="btn btn-success mb-3 me-2" data-bs-toggle="modal" data-bs-target="#batchTransactionModal">
         Add Batch Transactions
+    </button>
+    <button type="button" class="btn btn-info mb-3" data-bs-toggle="modal" data-bs-target="#summaryModal">
+        View Date Summary
     </button>
 
     <div class="table-responsive">
@@ -141,6 +144,53 @@
     </div>
 </div>
 
+<!-- Summary Modal -->
+<div class="modal fade animate__animated animate__fadeIn" id="summaryModal" tabindex="-1" aria-labelledby="summaryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg animate__animated animate__slideInDown">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="summaryModalLabel">Transaction Summary by Date</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <label for="startDate" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="startDate">
+                    </div>
+                    <div class="col-md-5">
+                        <label for="endDate" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="endDate">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-primary w-100" id="fetchSummary">Fetch</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="summaryTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Total Transactions</th>
+                                <th>Total Galon Out</th>
+                                <th>Total Galon In</th>
+                                <th>Total Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Summary data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -155,7 +205,18 @@
                 { "data": "customer_name" },
                 { "data": "galon_out" },
                 { "data": "galon_in" },
-                { "data": "transaction_date" },
+                { 
+                    "data": "transaction_date",
+                    "render": function(data, type, row) {
+                        if (type === 'display') {
+                            let date = new Date(data);
+                            return date.getDate().toString().padStart(2,'0') + '-' + 
+                                   (date.getMonth() + 1).toString().padStart(2,'0') + '-' + 
+                                   date.getFullYear();
+                        }
+                        return data;
+                    }
+                },
                 { "data": "total_price" },
                 {
                     "data": null,
@@ -469,6 +530,78 @@
 
         // Add initial batch row
         addBatchRow();
+
+        $('#fetchSummary').on('click', function() {
+            const startDate = $('#startDate').val();
+            const endDate = $('#endDate').val();
+            
+            if (!startDate || !endDate) {
+                Swal.fire('Error!', 'Please select both start and end dates', 'error');
+                return;
+            }
+
+            fetch(`/transactions/summary?start_date=${startDate}&end_date=${endDate}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const tbody = $('#summaryTable tbody');
+                    tbody.empty();
+                    
+                    let totalTransactions = 0;
+                    let totalGalonOut = 0;
+                    let totalGalonIn = 0;
+                    let totalRevenue = 0;
+
+                    data.summary.forEach(row => {
+                        tbody.append(`
+                            <tr>
+                                <td>${row.date}</td>
+                                <td>${row.total_transactions}</td>
+                                <td>${row.total_galon_out}</td>
+                                <td>${row.total_galon_in}</td>
+                                <td>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(row.total_revenue)}</td>
+                            </tr>
+                        `);
+
+                        // Calculate totals
+                        totalTransactions += parseInt(row.total_transactions);
+                        totalGalonOut += parseInt(row.total_galon_out);
+                        totalGalonIn += parseInt(row.total_galon_in);
+                        totalRevenue += parseFloat(row.total_revenue);
+                    });
+
+                    // Add total row
+                    if (data.summary.length > 0) {
+                        tbody.append(`
+                            <tr class="table-info fw-bold">
+                                <td>Total</td>
+                                <td>${totalTransactions}</td>
+                                <td>${totalGalonOut}</td>
+                                <td>${totalGalonIn}</td>
+                                <td>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalRevenue)}</td>
+                            </tr>
+                        `);
+                    } else {
+                        tbody.append(`
+                            <tr>
+                                <td colspan="5" class="text-center">No data available for the selected date range</td>
+                            </tr>
+                        `);
+                    }
+                } else {
+                    Swal.fire('Error!', data.message || 'Failed to fetch summary', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error!', 'An unexpected error occurred', 'error');
+            });
+        });
     });
 </script>
 @endsection

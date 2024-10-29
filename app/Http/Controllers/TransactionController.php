@@ -216,4 +216,47 @@ class TransactionController extends Controller
             return response()->json(['success' => false, 'message' => 'Failed to add batch transactions: ' . $e->getMessage()]);
         }
     }
+
+    public function getSummary(Request $request)
+    {
+        try {
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+
+            $summary = DB::table('transactions')
+                ->select(
+                    DB::raw('DATE(transaction_date) as date'),
+                    DB::raw('COUNT(*) as total_transactions'),
+                    DB::raw('SUM(galon_out) as total_galon_out'),
+                    DB::raw('SUM(galon_in) as total_galon_in'),
+                    DB::raw('SUM(total_price) as total_revenue')
+                )
+                ->where('is_active', true)
+                ->whereBetween('transaction_date', [$startDate, $endDate])
+                ->groupBy(DB::raw('DATE(transaction_date)'))
+                ->orderBy('date')
+                ->get();
+
+            $summary = $summary->map(function($row) {
+                $date = \Carbon\Carbon::parse($row->date)->format('d-m-Y');
+                return [
+                    'date' => $date,
+                    'total_transactions' => $row->total_transactions,
+                    'total_galon_out' => $row->total_galon_out,
+                    'total_galon_in' => $row->total_galon_in,
+                    'total_revenue' => $row->total_revenue,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'summary' => $summary
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch summary: ' . $e->getMessage()
+            ]);
+        }
+    }
 }
