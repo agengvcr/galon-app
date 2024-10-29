@@ -23,3 +23,8 @@ Aplikasi manajemen galon untuk Aero Tripandawa. Sistem ini dibangun menggunakan 
 ## Instalasi
 
 1. Clone repository
+2. Insert user admin
+```
+INSERT INTO users (name,email, password,created_at,updated_at,email_verified_at) 
+VALUES ('admin','admin@aero.com', SHA2('aerotripandawa2024', 256),now(),now(),now());
+```     

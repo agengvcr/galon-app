@@ -6,7 +6,7 @@
     <title>@yield('title', 'My Laravel App')</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -16,33 +16,159 @@
     <!-- Add Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
+        :root {
+            --primary-color: #2196F3;      /* Main blue */
+            --primary-dark: #1976D2;       /* Darker blue for hover states */
+            --primary-light: #BBDEFB;      /* Light blue for backgrounds */
+            --secondary-color: #64B5F6;    /* Secondary blue */
+            --background-color: #F5F9FF;   /* Very light blue background */
+            --text-color: #1A237E;         /* Dark blue text */
+            --text-muted: #5C6BC0;         /* Muted blue text */
+            --border-color: #E3F2FD;       /* Light blue border */
+        }
+
         body {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            color: var(--text-color);
+            background-color: var(--background-color);
         }
+
         main {
             flex: 1 0 auto;
         }
-        .modal-backdrop {
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
+
+        /* Flat Navbar Styles */
+        .navbar {
+            background-color: white !important;
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);
+            border-bottom: 1px solid var(--border-color);
         }
-        .modal-backdrop.show {
-            opacity: 0.5;
+
+        .navbar-light {
+            background-color: white !important;
         }
-        .modal {
-            transition: opacity 0.3s ease-in-out;
+
+        .nav-link {
+            color: var(--text-color) !important;
+            transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
         }
-        .modal.fade .modal-dialog {
-            transition: transform 0.3s ease-out;
-            transform: translate(0, -50px);
+
+        .nav-link:hover {
+            color: var(--primary-color) !important;
+            background-color: var(--primary-light);
         }
-        .modal.show .modal-dialog {
-            transform: none;
+
+        /* Flat Button Styles */
+        .btn {
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+            border: none;
         }
-        .animate__animated {
-            --animate-duration: 0.3s;
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-primary {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal-content {
+            border: none;
+            box-shadow: 0 3px 6px rgba(33, 150, 243, 0.16);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+            background-color: white;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
+            background-color: white;
+        }
+
+        /* Card Styles */
+        .card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);
+        }
+
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--primary-color);
+        }
+
+        /* Footer Styles */
+        .footer {
+            background-color: white !important;
+            border-top: 1px solid var(--border-color);
+            padding: 1rem 0;
+        }
+
+        .footer .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        /* Custom Animation Classes */
+        .hover-lift {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.2);
+        }
+
+        /* DataTables Customization */
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            border: none !important;
+            background: none !important;
+            color: var(--text-color) !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background-color: var(--primary-light) !important;
+            border: none !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        /* Form Controls */
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25);
+        }
+
+        /* Select2 Customization */
+        .select2-container--default .select2-selection--single:focus,
+        .select2-container--default .select2-selection--multiple:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25);
         }
     </style>
     @yield('styles')
@@ -51,24 +177,36 @@
     <header>
         <nav class="navbar navbar-expand-md navbar-light bg-light">
             <div class="container">
+                @auth
                 <a class="navbar-brand" href="{{ url('/') }}"><i class="fas fa-home me-2"></i></a>
+                @endauth
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('transactions.index') }}">
-                                <i class="fas fa-exchange-alt me-1"></i> Transactions
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('customers.index') }}">
-                                <i class="fas fa-users me-1"></i> Customers
-                            </a>
-                        </li>
-                     
-                        <!-- Add more navigation items here -->
+                        @auth
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('transactions.index') }}">
+                                    <i class="fas fa-exchange-alt me-1"></i> Transactions
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('customers.index') }}">
+                                    <i class="fas fa-users me-1"></i> Customers
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn nav-link border-0 bg-transparent">
+                                        <i class="fas fa-sign-out-alt me-1"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
+                        @else
+                          
+                        @endauth
                     </ul>
                 </div>
             </div>

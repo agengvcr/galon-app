@@ -4,7 +4,7 @@
 <div class="container">
     <!-- Galon Transaction Chart -->
     <div class="row justify-content-center mb-4">
-        <div class="col-md-12">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">Daily Galon Transactions</h5>
@@ -14,11 +14,9 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Revenue Chart -->
-    <div class="row justify-content-center mb-4">
-        <div class="col-md-12">
+        <!-- Revenue Chart -->
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">Monthly Revenue (Last 3 Months)</h5>
