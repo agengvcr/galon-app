@@ -301,7 +301,7 @@ class DebtController extends Controller
         $page = $request->get('page', 1);
         $perPage = 10;
 
-        $query = "SELECT id, name, phone_number 
+        $query = "SELECT id, name, address 
                   FROM customers 
                   WHERE (name LIKE ? OR phone_number LIKE ?) 
                   AND is_active = true 
@@ -312,7 +312,7 @@ class DebtController extends Controller
         $formattedCustomers = array_map(function ($customer) {
             return [
                 'id' => $customer->id,
-                'text' => $customer->name . ' (' . $customer->phone_number . ')'
+                'text' => $customer->name . ' (' . $customer->adress . ')'
             ];
         }, $customers);
 

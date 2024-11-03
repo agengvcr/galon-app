@@ -160,9 +160,9 @@ class TransactionController extends Controller
         $page = $request->get('page', 1);
         $perPage = 10;
 
-        $query = "SELECT id, name, phone_number 
+        $query = "SELECT id, name, address 
                   FROM customers 
-                  WHERE (name LIKE ? OR phone_number LIKE ?) 
+                  WHERE (name LIKE ? OR address LIKE ?) 
                   AND is_active = true 
                   LIMIT ? OFFSET ?";
         $offset = ($page - 1) * $perPage;
@@ -171,7 +171,7 @@ class TransactionController extends Controller
         $formattedCustomers = array_map(function ($customer) {
             return [
                 'id' => $customer->id,
-                'text' => $customer->name . ' (' . $customer->phone_number . ')'
+                'text' => $customer->name . ' (' . $customer->address . ')'
             ];
         }, $customers);
 
