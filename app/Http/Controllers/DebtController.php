@@ -303,24 +303,44 @@ class DebtController extends Controller
 
         $query = "SELECT id, name, address 
                   FROM customers 
-                  WHERE (name LIKE ? OR phone_number LIKE ?) 
+                  WHERE (
+                    LOWER(name) LIKE LOWER(?) OR 
+                    LOWER(address) LIKE LOWER(?)
+                  )
                   AND is_active = true 
+                  ORDER BY 
+                    CASE 
+                        WHEN LOWER(name) LIKE LOWER(?) THEN 1
+                        WHEN LOWER(address) LIKE LOWER(?) THEN 2
+                    END
                   LIMIT ? OFFSET ?";
+
         $offset = ($page - 1) * $perPage;
-        $customers = DB::select($query, ["%$search%", "%$search%", $perPage, $offset]);
+        $searchTerm = "%$search%";
+        $customers = DB::select($query, [
+            $searchTerm, 
+            $searchTerm,
+            $searchTerm,
+            $searchTerm, 
+            $perPage, 
+            $offset
+        ]);
 
         $formattedCustomers = array_map(function ($customer) {
             return [
                 'id' => $customer->id,
-                'text' => $customer->name . ' (' . $customer->adress . ')'
+                'text' => $customer->name . ' (' . $customer->address . ')'
             ];
         }, $customers);
 
         $totalQuery = "SELECT COUNT(*) as total 
                        FROM customers 
-                       WHERE (name LIKE ? OR phone_number LIKE ?) 
+                       WHERE (
+                         LOWER(name) LIKE LOWER(?) OR 
+                         LOWER(address) LIKE LOWER(?)
+                       )
                        AND is_active = true";
-        $totalResult = DB::selectOne($totalQuery, ["%$search%", "%$search%"]);
+        $totalResult = DB::selectOne($totalQuery, [$searchTerm, $searchTerm]);
         $total = $totalResult->total;
 
         return response()->json([
