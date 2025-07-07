@@ -29,7 +29,7 @@
                         <form action="{{ route('employee-attendance.destroy', $attendance->id) }}" method="POST" style="display:inline-block;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus absen ini?')">Hapus</button>
+                            <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                         </form>
                     </td>
                 </tr>
@@ -38,4 +38,38 @@
         </table>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach swal to all delete buttons
+    document.querySelectorAll('form[action*="employee-attendance"] .btn-danger').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const form = this.closest('form');
+            Swal.fire({
+                title: 'Yakin ingin menghapus absen ini?',
+                text: 'Aksi ini tidak dapat dibatalkan!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+    });
+    // Flash message swal
+    @if(session('success'))
+        Swal.fire('Berhasil!', @json(session('success')), 'success');
+    @elseif(session('error'))
+        Swal.fire('Gagal!', @json(session('error')), 'error');
+    @endif
+});
+</script>
 @endsection 

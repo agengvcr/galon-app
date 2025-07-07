@@ -153,6 +153,64 @@ $(document).ready(function() {
             $('#editEmployeeModal').modal('show');
         });
     });
+    // Delete employee
+    $('#employeesTable').on('click', '.delete-employee', function() {
+        const id = $(this).data('id');
+        Swal.fire({
+            title: 'Yakin ingin menghapus karyawan ini?',
+            text: 'Aksi ini tidak dapat dibatalkan!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/employees/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        table.ajax.reload();
+                        Swal.fire('Berhasil!', 'Karyawan berhasil dihapus.', 'success');
+                    } else {
+                        Swal.fire('Gagal!', data.message || 'Gagal menghapus karyawan', 'error');
+                    }
+                })
+                .catch(error => {
+                    Swal.fire('Error!', 'Terjadi kesalahan saat menghapus karyawan: ' + error.message, 'error');
+                });
+            }
+        });
+    });
+    // Add employee
+    $('#addEmployeeForm').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const formData = new FormData(form[0]);
+        fetch("{{ route('employees.store') }}", {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                $('#addEmployeeModal').modal('hide');
+                table.ajax.reload();
+                form[0].reset();
+                Swal.fire('Berhasil!', 'Karyawan berhasil ditambahkan.', 'success');
+            } else {
+                Swal.fire('Gagal!', data.message || 'Gagal menambah karyawan', 'error');
+            }
+        });
+    });
     // Save edit
     $('#saveEditEmployee').on('click', function() {
         const id = $('#editEmployeeId').val();
@@ -174,52 +232,9 @@ $(document).ready(function() {
             if (data.success) {
                 $('#editEmployeeModal').modal('hide');
                 table.ajax.reload();
+                Swal.fire('Berhasil!', 'Karyawan berhasil diupdate.', 'success');
             } else {
-                alert(data.message || 'Gagal update karyawan');
-            }
-        });
-    });
-    // Delete employee
-    $('#employeesTable').on('click', '.delete-employee', function() {
-        if (!confirm('Yakin ingin menghapus karyawan ini?')) return;
-        const id = $(this).data('id');
-        fetch(`/employees/${id}`, {
-            method: 'DELETE',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                table.ajax.reload();
-            } else {
-                alert('Gagal menghapus karyawan');
-            }
-        })
-        .catch(error => {
-            alert('Terjadi kesalahan saat menghapus karyawan: ' + error.message);
-        });
-    });
-    // Add employee
-    $('#addEmployeeForm').on('submit', function(e) {
-        e.preventDefault();
-        const form = $(this);
-        const formData = new FormData(form[0]);
-        fetch("{{ route('employees.store') }}", {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                $('#addEmployeeModal').modal('hide');
-                table.ajax.reload();
-                form[0].reset();
-            } else {
-                alert(data.message || 'Gagal menambah karyawan');
+                Swal.fire('Gagal!', data.message || 'Gagal update karyawan', 'error');
             }
         });
     });
