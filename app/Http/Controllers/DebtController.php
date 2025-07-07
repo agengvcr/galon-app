@@ -86,56 +86,34 @@ class DebtController extends Controller
      */
     public function updatePayment(Request $request, $id)
     {
-        $validatedData = $request->validate([
-            'payment_amount' => 'required|numeric|min:0',
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            // Get current debt record
-            $debt = DB::selectOne("SELECT * FROM debts WHERE id = ? AND is_active = true", [$id]);
-            
-            if (!$debt) {
-                throw new \Exception('Debt record not found');
-            }
-
-            $newPaidAmount = $debt->paid_amount + $validatedData['payment_amount'];
-            
-            // Determine new status
-            $status = 'UNPAID';
-            if ($newPaidAmount >= $debt->amount) {
-                $status = 'PAID';
-                $newPaidAmount = $debt->amount; // Ensure paid amount doesn't exceed total amount
-            } elseif ($newPaidAmount > 0) {
-                $status = 'PARTIALLY_PAID';
-            }
-
-            // Update debt record
-            DB::update(
-                "UPDATE debts 
-                 SET paid_amount = ?, 
-                     status = ?,
-                     updated_at = NOW() 
-                 WHERE id = ? AND is_active = true",
-                [$newPaidAmount, $status, $id]
-            );
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment updated successfully',
-                'new_status' => $status,
-                'remaining_amount' => $debt->amount - $newPaidAmount
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update payment: ' . $e->getMessage()
-            ], 500);
+        $debt = DB::table('debts')->where('id', $id)->first();
+        if (!$debt) {
+            return response()->json(['success' => false, 'message' => 'Hutang tidak ditemukan.'], 404);
         }
+        $validated = $request->validate([
+            'payment_amount' => 'required|numeric|min:1',
+            'payment_date' => 'required|date',
+            'description' => 'nullable|string|max:255',
+        ]);
+        $remaining = $debt->amount - $debt->paid_amount;
+        if ($validated['payment_amount'] > $remaining) {
+            return response()->json(['success' => false, 'message' => 'Jumlah pembayaran melebihi sisa hutang!'], 422);
+        }
+        // Tambahkan ke debt_payments
+        DB::table('debt_payments')->insert([
+            'debt_id' => $debt->id,
+            'amount' => $validated['payment_amount'],
+            'payment_date' => $validated['payment_date'],
+            'description' => $validated['description'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        // Update paid_amount di debts
+        DB::table('debts')->where('id', $debt->id)->update([
+            'paid_amount' => $debt->paid_amount + $validated['payment_amount'],
+            'updated_at' => now(),
+        ]);
+        return response()->json(['success' => true, 'message' => 'Pembayaran hutang berhasil dicatat.']);
     }
 
     /**

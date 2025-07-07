@@ -144,6 +144,16 @@ class ReportController extends Controller
                 ->whereBetween('date', [$dateStart, $dateEnd])
                 ->orderBy('date')
                 ->get();
+            $totalDebtPayment = DB::table('debt_payments')
+                ->whereBetween('payment_date', [$dateStart, $dateEnd])
+                ->sum('amount');
+            $debtPayments = DB::table('debt_payments')
+                ->join('debts', 'debt_payments.debt_id', '=', 'debts.id')
+                ->join('customers', 'debts.customer_id', '=', 'customers.id')
+                ->select('debt_payments.*', 'customers.name as customer_name')
+                ->whereBetween('payment_date', [$dateStart, $dateEnd])
+                ->orderBy('payment_date')
+                ->get();
         } else {
             $totalRevenue = DB::table('transactions')
                 ->whereRaw("to_char(transaction_date, 'YYYY-MM') = ?", [$month])
@@ -166,7 +176,18 @@ class ReportController extends Controller
                 ->whereRaw("to_char(date, 'YYYY-MM') = ?", [$month])
                 ->orderBy('date')
                 ->get();
+            $totalDebtPayment = DB::table('debt_payments')
+                ->whereRaw("to_char(payment_date, 'YYYY-MM') = ?", [$month])
+                ->sum('amount');
+            $debtPayments = DB::table('debt_payments')
+                ->join('debts', 'debt_payments.debt_id', '=', 'debts.id')
+                ->join('customers', 'debts.customer_id', '=', 'customers.id')
+                ->select('debt_payments.*', 'customers.name as customer_name')
+                ->whereRaw("to_char(payment_date, 'YYYY-MM') = ?", [$month])
+                ->orderBy('payment_date')
+                ->get();
         }
+        $totalRevenue = $totalRevenue + $totalDebtPayment;
         $totalInfak = $totalGalonIn * 1000;
         $totalOperational = $operationalExpenses->sum('amount');
         $totalRevenueSetelahInfak = $totalRevenue - $totalInfak - $totalOperational;
@@ -191,6 +212,6 @@ class ReportController extends Controller
                 'gaji_bersih' => $gajiBersih,
             ];
         }
-        return view('reports.payroll-report', compact('month', 'dateStart', 'dateEnd', 'periodeLabel', 'totalRevenue', 'totalGalonIn', 'totalInfak', 'totalOperational', 'totalRevenueSetelahInfak', 'karyawanShare', 'pemilikShare', 'gajiPerKaryawan', 'employees', 'operationalExpenses', 'loans', 'gajiKaryawan'));
+        return view('reports.payroll-report', compact('month', 'dateStart', 'dateEnd', 'periodeLabel', 'totalRevenue', 'totalDebtPayment', 'debtPayments', 'totalGalonIn', 'totalInfak', 'totalOperational', 'totalRevenueSetelahInfak', 'karyawanShare', 'pemilikShare', 'gajiPerKaryawan', 'employees', 'operationalExpenses', 'loans', 'gajiKaryawan'));
     }
 } 

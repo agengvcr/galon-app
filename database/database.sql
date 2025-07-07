@@ -85,3 +85,14 @@ CREATE TABLE employee_loans (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
 );
+
+CREATE TABLE debt_payments (
+    id SERIAL PRIMARY KEY,
+    debt_id INT NOT NULL,
+    amount NUMERIC(12, 2) NOT NULL,
+    payment_date DATE NOT NULL,
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (debt_id) REFERENCES debts(id) ON DELETE CASCADE
+);

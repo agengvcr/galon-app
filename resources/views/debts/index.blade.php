@@ -349,6 +349,45 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Pembayaran Hutang -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel">Pembayaran Hutang</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="paymentForm">
+                    @csrf
+                    <input type="hidden" id="paymentDebtId">
+                    <div class="mb-3">
+                        <label for="paymentAmount" class="form-label">Jumlah Pembayaran</label>
+                        <input type="number" class="form-control" id="paymentAmount" name="payment_amount" min="1" required>
+                        <div class="invalid-feedback" id="paymentAmountError"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="paymentDate" class="form-label">Tanggal Pembayaran</label>
+                        <input type="date" class="form-control" id="paymentDate" name="payment_date" value="{{ date('Y-m-d') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="paymentDescription" class="form-label">Keterangan</label>
+                        <input type="text" class="form-control" id="paymentDescription" name="description">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sisa Hutang</label>
+                        <input type="text" class="form-control" id="remainingAmount" readonly>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-primary" id="savePayment">Catat Pembayaran</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -768,6 +807,70 @@ $(document).ready(function() {
     
     // Initial Load
     loadStatistics();
+
+    // Tambah event untuk buka modal pembayaran hutang
+    $(document).on('click', '.btn-payment', function() {
+        const debtId = $(this).data('id');
+        const remaining = $(this).data('remaining');
+        $('#paymentDebtId').val(debtId);
+        $('#remainingAmount').val(remaining);
+        $('#paymentAmount').val('');
+        $('#paymentAmountError').text('');
+        $('#paymentModal').modal('show');
+    });
+
+    // Validasi jumlah pembayaran di sisi view
+    $('#paymentAmount').on('input', function() {
+        const max = parseFloat($('#remainingAmount').val());
+        const val = parseFloat($(this).val());
+        if (val > max) {
+            $('#paymentAmountError').text('Jumlah pembayaran melebihi sisa hutang!').show();
+            $(this).addClass('is-invalid');
+        } else {
+            $('#paymentAmountError').text('').hide();
+            $(this).removeClass('is-invalid');
+        }
+    });
+
+    // Submit pembayaran
+    $('#savePayment').on('click', function() {
+        const debtId = $('#paymentDebtId').val();
+        const amount = parseFloat($('#paymentAmount').val());
+        const max = parseFloat($('#remainingAmount').val());
+        if (amount > max) {
+            $('#paymentAmountError').text('Jumlah pembayaran melebihi sisa hutang!').show();
+            $('#paymentAmount').addClass('is-invalid');
+            return;
+        }
+        const data = {
+            payment_amount: amount,
+            payment_date: $('#paymentDate').val(),
+            description: $('#paymentDescription').val(),
+            _token: $('input[name="_token"]').val()
+        };
+        $.ajax({
+            url: '/debts/' + debtId + '/payment',
+            method: 'POST',
+            data: data,
+            success: function(res) {
+                if (res.success) {
+                    $('#paymentModal').modal('hide');
+                    location.reload();
+                } else {
+                    $('#paymentAmountError').text(res.message).show();
+                    $('#paymentAmount').addClass('is-invalid');
+                }
+            },
+            error: function(xhr) {
+                let msg = 'Terjadi kesalahan.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                }
+                $('#paymentAmountError').text(msg).show();
+                $('#paymentAmount').addClass('is-invalid');
+            }
+        });
+    });
 });
 </script>
 @endsection 

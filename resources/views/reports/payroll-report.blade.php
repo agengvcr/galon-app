@@ -30,6 +30,7 @@
         <strong>Total Infak (Rp 1.000/galon masuk):</strong> Rp {{ number_format($totalInfak ?? 0, 0, ',', '.') }}<br>
         <strong>Total Pemasukan Setelah Infak:</strong> Rp {{ number_format($totalRevenueSetelahInfak ?? 0, 0, ',', '.') }}<br>
         <strong>Total Biaya Operasional:</strong> Rp {{ number_format($totalOperational ?? 0, 0, ',', '.') }}<br>
+        <strong>Total Pembayaran Hutang:</strong> Rp {{ number_format($totalDebtPayment ?? 0, 0, ',', '.') }}<br>
     </div>
     <div class="table-responsive">
         <table class="table table-bordered">
@@ -104,6 +105,33 @@
                 @empty
                 <tr>
                     <td colspan="3" class="text-center">Tidak ada biaya operasional pada periode ini.</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+    <div class="table-responsive mt-4">
+        <h5>Rincian Pembayaran Hutang</h5>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Nama Pelanggan</th>
+                    <th>Tanggal Pembayaran</th>
+                    <th>Jumlah</th>
+                    <th>Keterangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($debtPayments as $pay)
+                <tr>
+                    <td>{{ $pay->customer_name }}</td>
+                    <td>{{ $pay->payment_date }}</td>
+                    <td>Rp {{ number_format($pay->amount, 0, ',', '.') }}</td>
+                    <td>{{ $pay->description }}</td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="4" class="text-center">Tidak ada pembayaran hutang pada periode ini.</td>
                 </tr>
                 @endforelse
             </tbody>
