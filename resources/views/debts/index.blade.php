@@ -269,6 +269,10 @@
                         <label for="paymentAmount" class="form-label">Jumlah Pembayaran</label>
                         <input type="number" step="0.01" class="form-control" id="paymentAmount" name="payment_amount" required>
                     </div>
+                    <div class="mb-3">
+                        <label for="recordPaymentDate" class="form-label">Tanggal Pembayaran</label>
+                        <input type="date" class="form-control" id="recordPaymentDate" name="payment_date" required>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -388,6 +392,32 @@
         </div>
     </div>
 </div>
+
+<!-- Payment History Modal -->
+<div class="modal fade" id="paymentHistoryModal" tabindex="-1" aria-labelledby="paymentHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentHistoryModalLabel">Riwayat Pembayaran</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="paymentHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Jumlah</th>
+                                <th>Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -454,6 +484,12 @@ $(document).ready(function() {
                                     data-bs-toggle="tooltip" 
                                     data-bs-title="Record Payment">
                                 <i class="fas fa-money-bill-wave"></i>
+                            </button>
+                            <button class="btn btn-secondary btn-sm action-btn payment-history" 
+                                    data-id="${data.id}" 
+                                    data-bs-toggle="tooltip" 
+                                    data-bs-title="Riwayat Pembayaran">
+                                <i class="fas fa-list-ul"></i>
                             </button>
                             <button class="btn btn-danger btn-sm action-btn delete-debt" 
                                     data-id="${data.id}" 
@@ -648,6 +684,9 @@ $(document).ready(function() {
                 $('#remainingAmount').val(new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
                     .format(data.amount - data.paid_amount));
                 $('#paymentAmount').val('').attr('max', data.amount - data.paid_amount);
+                // Set tanggal pembayaran ke hari ini
+                const today = new Date().toISOString().split('T')[0];
+                $('#recordPaymentDate').val(today);
                 $('#recordPaymentModal').modal('show');
             })
             .catch(error => {
@@ -816,6 +855,9 @@ $(document).ready(function() {
         $('#remainingAmount').val(remaining);
         $('#paymentAmount').val('');
         $('#paymentAmountError').text('');
+        // Set payment date to today
+        const today = new Date().toISOString().split('T')[0];
+        $('#paymentDate').val(today);
         $('#paymentModal').modal('show');
     });
 
@@ -870,6 +912,38 @@ $(document).ready(function() {
                 $('#paymentAmount').addClass('is-invalid');
             }
         });
+    });
+
+    // Payment History
+    $(document).on('click', '.payment-history', function() {
+        const debtId = $(this).data('id');
+        // Kosongkan tabel
+        const tbody = $('#paymentHistoryTable tbody');
+        tbody.empty();
+        // Fetch data
+        fetch(`/debts/${debtId}/payments`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.payments.length > 0) {
+                    const formatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' });
+                    data.payments.forEach(payment => {
+                        tbody.append(`
+                            <tr>
+                                <td>${new Date(payment.payment_date).toLocaleDateString('id-ID')}</td>
+                                <td>${formatter.format(payment.amount)}</td>
+                                <td>${payment.description ?? ''}</td>
+                            </tr>
+                        `);
+                    });
+                } else {
+                    tbody.append('<tr><td colspan="3" class="text-center">Tidak ada riwayat pembayaran</td></tr>');
+                }
+                $('#paymentHistoryModal').modal('show');
+            })
+            .catch(error => {
+                tbody.append('<tr><td colspan="3" class="text-center text-danger">Gagal memuat data</td></tr>');
+                $('#paymentHistoryModal').modal('show');
+            });
     });
 });
 </script>

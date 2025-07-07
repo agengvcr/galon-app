@@ -101,6 +101,13 @@
 
 @section('scripts')
 <script>
+// Ensure CSRF token is available for AJAX
+if (document.querySelector('meta[name="csrf-token"]') === null) {
+    const meta = document.createElement('meta');
+    meta.name = 'csrf-token';
+    meta.content = "{{ csrf_token() }}";
+    document.head.appendChild(meta);
+}
 $(document).ready(function() {
     var table = $('#employeesTable').DataTable({
         processing: true,
@@ -111,7 +118,6 @@ $(document).ready(function() {
         },
         columns: [
             { data: null, render: function (data, type, row, meta) { return meta.row + 1; } },
-            { data: 'id', visible: false },
             { data: 'name' },
             { data: 'phone_number' },
             { data: 'address' },
@@ -124,7 +130,7 @@ $(document).ready(function() {
                 }
             }
         ],
-        order: [[2, "asc"]]
+        order: [[1, "asc"]]
     });
     table.on('order.dt search.dt', function () {
         table.column(0, {search:'applied', order:'applied'}).nodes().each(function (cell, i) {
@@ -155,7 +161,7 @@ $(document).ready(function() {
             phone_number: $('#editPhoneNumber').val(),
             address: $('#editAddress').val(),
             position: $('#editPosition').val(),
-            _token: $('input[name="_token"]').val(),
+            _token: $('meta[name="csrf-token"]').attr('content'),
             _method: 'PUT'
         };
         fetch(`/employees/${id}`, {
@@ -179,15 +185,21 @@ $(document).ready(function() {
         const id = $(this).data('id');
         fetch(`/employees/${id}`, {
             method: 'DELETE',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': $('input[name="_token"]').val() }
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 table.ajax.reload();
             } else {
                 alert('Gagal menghapus karyawan');
             }
+        })
+        .catch(error => {
+            alert('Terjadi kesalahan saat menghapus karyawan: ' + error.message);
         });
     });
     // Add employee

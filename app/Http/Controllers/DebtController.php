@@ -108,9 +108,17 @@ class DebtController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        // Update paid_amount di debts
+        // Update paid_amount dan status di debts
+        $newPaidAmount = $debt->paid_amount + $validated['payment_amount'];
+        $status = 'UNPAID';
+        if ($newPaidAmount >= $debt->amount) {
+            $status = 'PAID';
+        } elseif ($newPaidAmount > 0) {
+            $status = 'PARTIALLY_PAID';
+        }
         DB::table('debts')->where('id', $debt->id)->update([
-            'paid_amount' => $debt->paid_amount + $validated['payment_amount'],
+            'paid_amount' => $newPaidAmount,
+            'status' => $status,
             'updated_at' => now(),
         ]);
         return response()->json(['success' => true, 'message' => 'Pembayaran hutang berhasil dicatat.']);
@@ -203,14 +211,17 @@ class DebtController extends Controller
     public function destroy($id)
     {
         try {
+            // Soft delete the debt
             DB::update(
                 "UPDATE debts SET is_active = false WHERE id = ?",
                 [$id]
             );
+            // Hard delete all related debt_payments
+            DB::table('debt_payments')->where('debt_id', $id)->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Debt record deleted successfully'
+                'message' => 'Debt record and related payments deleted successfully'
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -448,6 +459,31 @@ class DebtController extends Controller
                 'success' => false,
                 'message' => 'Failed to fetch debt statistics: ' . $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * Get payment history for a debt.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\Response
+     */
+    public function paymentHistory($id)
+    {
+        try {
+            $payments = \DB::table('debt_payments')
+                ->where('debt_id', $id)
+                ->orderBy('payment_date', 'desc')
+                ->get(['payment_date', 'amount', 'description']);
+            return response()->json([
+                'success' => true,
+                'payments' => $payments
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch payment history: ' . $e->getMessage()
+            ], 500);
         }
     }
 } 

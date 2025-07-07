@@ -11,7 +11,7 @@ class EmployeeController extends Controller
     {
         if ($request->ajax()) {
             $table = 'employees';
-            $columns = ['name', 'phone_number', 'address', 'position'];
+            $columns = ['id', 'name', 'phone_number', 'address', 'position'];
             $whereConditions = [['is_active', '=', true]];
 
             $response = [

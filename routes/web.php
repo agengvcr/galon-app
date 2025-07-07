@@ -49,6 +49,7 @@ Route::middleware(['auth'])->group(function () {
     // Route::get('transactions/report', [TransactionController::class, 'report'])->name('transactions.report');
 
     Route::get('/transactions/customers', [TransactionController::class, 'getCustomers'])->name('transactions.customers');
+    Route::get('/transactions/customer-galon', [TransactionController::class, 'getCustomerGalon'])->name('transactions.customer-galon');
 
     // Add these routes with your existing routes
     Route::get('/reports/chart', [ReportController::class, 'transactionChart'])->name('reports.chart');
@@ -58,6 +59,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/monthly-table', [ReportController::class, 'monthlyReport'])->name('reports.monthlyTable');
     Route::get('/reports/monthly-table-data', [ReportController::class, 'getMonthlyTableData'])->name('reports.monthlyTableData');
     Route::get('/reports/payroll', [ReportController::class, 'payrollReport'])->name('reports.payroll');
+    Route::get('/reports/galon-stock', [ReportController::class, 'galonStockReport'])->name('reports.galonStock');
 
     // Debt routes
     Route::get('/debts', [DebtController::class, 'index'])->name('debts.index');
@@ -72,6 +74,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/debts/summary-by-date', [DebtController::class, 'getSummaryByDate'])->name('debts.summaryByDate');
     Route::get('/debts/overdue', [DebtController::class, 'getOverdueDebts'])->name('debts.overdue');
     Route::get('/debts/statistics', [DebtController::class, 'getStatistics'])->name('debts.statistics');
+    Route::get('/debts/{id}/payments', [DebtController::class, 'paymentHistory']);
 
     // Employee routes
     Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');

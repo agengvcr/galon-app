@@ -207,9 +207,18 @@
                                 <ul class="dropdown-menu" aria-labelledby="navbarKaryawan">
                                     <li><a class="dropdown-item" href="{{ route('employees.index') }}">Data Karyawan</a></li>
                                     <li><a class="dropdown-item" href="{{ route('employee-attendance.index') }}">Absen Karyawan</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('reports.payroll') }}">Laporan Penggajian</a></li>
                                     <li><a class="dropdown-item" href="{{ route('operational-expenses.index') }}">Biaya Operasional</a></li>
                                     <li><a class="dropdown-item" href="{{ route('employee-loans.index') }}">Pinjaman Karyawan</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarLaporan" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-chart-bar me-1"></i> Laporan
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="navbarLaporan">
+                                    <li><a class="dropdown-item" href="{{ route('reports.payroll') }}">Laporan Penggajian</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('reports.galonStock') }}">Laporan Stok Galon</a></li>
+                                    <!-- Tambahkan menu laporan lain di sini jika ada -->
                                 </ul>
                             </li>
                             <li class="nav-item">

@@ -47,6 +47,9 @@
                         <select class="form-select" id="customer_id" name="customer_id" required style="width: 100%;">
                             <!-- Options will be loaded via AJAX -->
                         </select>
+                        <div id="customer-galon-info" class="mt-2 text-info" style="display:none;">
+                            Total galon pelanggan: <span id="customer-galon-value">0</span>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="galon_out" class="form-label">Galon Keluar</label>
@@ -601,6 +604,29 @@
                 console.error('Error:', error);
                 Swal.fire('Error!', 'An unexpected error occurred', 'error');
             });
+        });
+
+        $('#customer_id').on('change', function() {
+            var customerId = $(this).val();
+            if (customerId) {
+                $.ajax({
+                    url: '{{ route('transactions.customer-galon') }}',
+                    data: { customer_id: customerId },
+                    success: function(res) {
+                        if (res.success) {
+                            $('#customer-galon-value').text(res.total_galon);
+                            $('#customer-galon-info').show();
+                        } else {
+                            $('#customer-galon-info').hide();
+                        }
+                    },
+                    error: function() {
+                        $('#customer-galon-info').hide();
+                    }
+                });
+            } else {
+                $('#customer-galon-info').hide();
+            }
         });
     });
 </script>

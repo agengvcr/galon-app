@@ -192,9 +192,9 @@ class ReportController extends Controller
         $totalOperational = $operationalExpenses->sum('amount');
         $totalRevenueSetelahInfak = $totalRevenue - $totalInfak - $totalOperational;
         $totalKaryawan = $employees->count();
-        $karyawanShare = $totalRevenueSetelahInfak * 0.4;
-        $pemilikShare = $totalRevenueSetelahInfak * 0.6;
-        $gajiPerKaryawan = $totalKaryawan > 0 ? $karyawanShare / $totalKaryawan : 0;
+        $karyawanShare = $totalRevenueSetelahInfak * 0.35;
+        $pemilikShare = $totalRevenueSetelahInfak * 0.65;
+        $gajiPerKaryawan = $totalKaryawan > 1 ? $karyawanShare / $totalKaryawan : $karyawanShare * 0.75;
         // Pinjaman karyawan pada periode
         $loans = DB::table('employee_loans')
             ->whereIn('employee_id', $employees->pluck('id'))
@@ -213,5 +213,30 @@ class ReportController extends Controller
             ];
         }
         return view('reports.payroll-report', compact('month', 'dateStart', 'dateEnd', 'periodeLabel', 'totalRevenue', 'totalDebtPayment', 'debtPayments', 'totalGalonIn', 'totalInfak', 'totalOperational', 'totalRevenueSetelahInfak', 'karyawanShare', 'pemilikShare', 'gajiPerKaryawan', 'employees', 'operationalExpenses', 'loans', 'gajiKaryawan'));
+    }
+
+    /**
+     * Laporan stok galon per customer
+     */
+    public function galonStockReport(Request $request)
+    {
+        $customers = DB::table('customers')
+            ->where('is_active', true)
+            ->get();
+        $data = [];
+        foreach ($customers as $customer) {
+            $stok = DB::table('transactions')
+                ->where('customer_id', $customer->id)
+                ->where('is_active', true)
+                ->selectRaw('COALESCE(SUM(galon_in),0) - COALESCE(SUM(galon_out),0) as stok')
+                ->first();
+            $data[] = [
+                'customer_name' => $customer->name,
+                'phone_number' => $customer->phone_number,
+                'address' => $customer->address,
+                'stok_galon' => $stok->stok ?? 0
+            ];
+        }
+        return view('reports.galon-stock-report', ['data' => $data]);
     }
 } 

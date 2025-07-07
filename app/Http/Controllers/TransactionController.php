@@ -259,4 +259,33 @@ class TransactionController extends Controller
             ]);
         }
     }
+
+    /**
+     * Get total galon for a specific customer.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function getCustomerGalon(Request $request)
+    {
+        $customerId = $request->input('customer_id');
+        if (!$customerId) {
+            return response()->json(['success' => false, 'message' => 'customer_id is required'], 400);
+        }
+        $result = DB::table('transactions')
+            ->select(
+                DB::raw('COALESCE(SUM(galon_out),0) as total_galon_out'),
+                DB::raw('COALESCE(SUM(galon_in),0) as total_galon_in')
+            )
+            ->where('customer_id', $customerId)
+            ->where('is_active', true)
+            ->first();
+        $total_galon = ($result->total_galon_in ?? 0) -($result->total_galon_out ?? 0) ;
+        return response()->json([
+            'success' => true,
+            'total_galon' => $total_galon,
+            'total_galon_out' => $result->total_galon_out ?? 0,
+            'total_galon_in' => $result->total_galon_in ?? 0,
+        ]);
+    }
 }
