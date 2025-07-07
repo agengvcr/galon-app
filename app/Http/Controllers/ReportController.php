@@ -21,14 +21,14 @@ class ReportController extends Controller
 
         $sql = "
             SELECT 
-                DATE(transaction_date) as date,
+                transaction_date::date as date,
                 SUM(galon_in) as galon_in,
                 SUM(galon_out) as galon_out
             FROM transactions
-            WHERE YEAR(transaction_date) = ?
-            AND MONTH(transaction_date) = ?
+            WHERE EXTRACT(YEAR FROM transaction_date) = ?
+            AND EXTRACT(MONTH FROM transaction_date) = ?
             AND is_active = TRUE
-            GROUP BY DATE(transaction_date)
+            GROUP BY transaction_date::date
             ORDER BY date
         ";
 
@@ -50,13 +50,13 @@ class ReportController extends Controller
     {
         $sql = "
             SELECT 
-                DATE_FORMAT(transaction_date, '%Y-%m') as month,
+                TO_CHAR(transaction_date, 'YYYY-MM') as month,
                 SUM(total_price) as total_price,
                 COUNT(*) as transaction_count
             FROM transactions 
-            WHERE transaction_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH)
+            WHERE transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
                 AND is_active = TRUE
-            GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
+            GROUP BY TO_CHAR(transaction_date, 'YYYY-MM')
             ORDER BY month ASC
         ";
 
@@ -75,15 +75,15 @@ class ReportController extends Controller
     {
         $sql = "
             SELECT 
-                DATE_FORMAT(transaction_date, '%Y-%m') as month,
+                TO_CHAR(transaction_date, 'YYYY-MM') as month,
                 SUM(total_price) as total_price,
                 COUNT(*) as transaction_count,
                 SUM(galon_in) as total_galon_in,
                 SUM(galon_out) as total_galon_out
             FROM transactions 
-            WHERE transaction_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH)
+            WHERE transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
                 AND is_active = TRUE
-            GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
+            GROUP BY TO_CHAR(transaction_date, 'YYYY-MM')
             ORDER BY month DESC
         ";
 
@@ -95,15 +95,15 @@ class ReportController extends Controller
     {
         $sql = "
             SELECT 
-                DATE_FORMAT(transaction_date, '%Y-%m') as month,
+                TO_CHAR(transaction_date, 'YYYY-MM') as month,
                 SUM(total_price) as total_price,
                 COUNT(*) as transaction_count,
                 SUM(galon_in) as total_galon_in,
                 SUM(galon_out) as total_galon_out
             FROM transactions 
-            WHERE transaction_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH)
+            WHERE transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
                 AND is_active = TRUE
-            GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
+            GROUP BY TO_CHAR(transaction_date, 'YYYY-MM')
             ORDER BY month DESC
         ";
 
@@ -115,5 +115,82 @@ class ReportController extends Controller
         }
 
         return response()->json($monthlyData);
+    }
+
+    public function payrollReport(Request $request)
+    {
+        $dateStart = $request->input('date_start');
+        $dateEnd = $request->input('date_end');
+        $month = $request->input('month', date('Y-m'));
+        if ($dateStart && $dateEnd) {
+            $totalRevenue = DB::table('transactions')
+                ->whereBetween(DB::raw('DATE(transaction_date)'), [$dateStart, $dateEnd])
+                ->where('is_active', true)
+                ->sum('total_price');
+            $totalGalonIn = DB::table('transactions')
+                ->whereBetween(DB::raw('DATE(transaction_date)'), [$dateStart, $dateEnd])
+                ->where('is_active', true)
+                ->sum('galon_in');
+            $employeeIds = DB::table('employee_attendances')
+                ->whereBetween('date', [$dateStart, $dateEnd])
+                ->distinct('employee_id')
+                ->pluck('employee_id');
+            $employees = DB::table('employees')
+                ->whereIn('id', $employeeIds)
+                ->where('is_active', true)
+                ->get();
+            $periodeLabel = date('d F Y', strtotime($dateStart)) . ' s/d ' . date('d F Y', strtotime($dateEnd));
+            $operationalExpenses = DB::table('operational_expenses')
+                ->whereBetween('date', [$dateStart, $dateEnd])
+                ->orderBy('date')
+                ->get();
+        } else {
+            $totalRevenue = DB::table('transactions')
+                ->whereRaw("to_char(transaction_date, 'YYYY-MM') = ?", [$month])
+                ->where('is_active', true)
+                ->sum('total_price');
+            $totalGalonIn = DB::table('transactions')
+                ->whereRaw("to_char(transaction_date, 'YYYY-MM') = ?", [$month])
+                ->where('is_active', true)
+                ->sum('galon_in');
+            $employeeIds = DB::table('employee_attendances')
+                ->whereRaw("to_char(date, 'YYYY-MM') = ?", [$month])
+                ->distinct('employee_id')
+                ->pluck('employee_id');
+            $employees = DB::table('employees')
+                ->whereIn('id', $employeeIds)
+                ->where('is_active', true)
+                ->get();
+            $periodeLabel = \Carbon\Carbon::createFromFormat('Y-m', $month)->translatedFormat('F Y');
+            $operationalExpenses = DB::table('operational_expenses')
+                ->whereRaw("to_char(date, 'YYYY-MM') = ?", [$month])
+                ->orderBy('date')
+                ->get();
+        }
+        $totalInfak = $totalGalonIn * 1000;
+        $totalOperational = $operationalExpenses->sum('amount');
+        $totalRevenueSetelahInfak = $totalRevenue - $totalInfak - $totalOperational;
+        $totalKaryawan = $employees->count();
+        $karyawanShare = $totalRevenueSetelahInfak * 0.4;
+        $pemilikShare = $totalRevenueSetelahInfak * 0.6;
+        $gajiPerKaryawan = $totalKaryawan > 0 ? $karyawanShare / $totalKaryawan : 0;
+        // Pinjaman karyawan pada periode
+        $loans = DB::table('employee_loans')
+            ->whereIn('employee_id', $employees->pluck('id'))
+            ->whereBetween('date', [$dateStart ?? $month.'-01', $dateEnd ?? $month.'-31'])
+            ->get();
+        // Hitung gaji per karyawan setelah dipotong pinjaman
+        $gajiKaryawan = [];
+        foreach ($employees as $emp) {
+            $pinjaman = $loans->where('employee_id', $emp->id)->sum('amount');
+            $gajiBersih = max($gajiPerKaryawan - $pinjaman, 0);
+            $gajiKaryawan[] = [
+                'employee' => $emp,
+                'gaji' => $gajiPerKaryawan,
+                'pinjaman' => $pinjaman,
+                'gaji_bersih' => $gajiBersih,
+            ];
+        }
+        return view('reports.payroll-report', compact('month', 'dateStart', 'dateEnd', 'periodeLabel', 'totalRevenue', 'totalGalonIn', 'totalInfak', 'totalOperational', 'totalRevenueSetelahInfak', 'karyawanShare', 'pemilikShare', 'gajiPerKaryawan', 'employees', 'operationalExpenses', 'loans', 'gajiKaryawan'));
     }
 } 

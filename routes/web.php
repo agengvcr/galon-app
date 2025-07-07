@@ -7,6 +7,10 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DebtController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EmployeeAttendanceController;
+use App\Http\Controllers\OperationalExpenseController;
+use App\Http\Controllers\EmployeeLoanController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,6 +57,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/price-chart-data', [ReportController::class, 'getPriceChartData'])->name('reports.priceChartData');
     Route::get('/reports/monthly-table', [ReportController::class, 'monthlyReport'])->name('reports.monthlyTable');
     Route::get('/reports/monthly-table-data', [ReportController::class, 'getMonthlyTableData'])->name('reports.monthlyTableData');
+    Route::get('/reports/payroll', [ReportController::class, 'payrollReport'])->name('reports.payroll');
 
     // Debt routes
     Route::get('/debts', [DebtController::class, 'index'])->name('debts.index');
@@ -67,6 +72,23 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/debts/summary-by-date', [DebtController::class, 'getSummaryByDate'])->name('debts.summaryByDate');
     Route::get('/debts/overdue', [DebtController::class, 'getOverdueDebts'])->name('debts.overdue');
     Route::get('/debts/statistics', [DebtController::class, 'getStatistics'])->name('debts.statistics');
+
+    // Employee routes
+    Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');
+    Route::get('/employees/create', [EmployeeController::class, 'create'])->name('employees.create');
+    Route::post('/employees', [EmployeeController::class, 'store'])->name('employees.store');
+    Route::get('/employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
+    Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+
+    // Employee Attendance routes
+    Route::resource('employee-attendance', EmployeeAttendanceController::class);
+
+    // Operational Expenses routes
+    Route::resource('operational-expenses', OperationalExpenseController::class);
+
+    // Employee Loans routes
+    Route::resource('employee-loans', EmployeeLoanController::class);
 });
 
 // Keep these routes outside the middleware group

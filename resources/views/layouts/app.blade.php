@@ -12,8 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
     <!-- Add Animate.css library -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <!-- Add Select2 CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>    <!-- Add Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         :root {
@@ -188,24 +187,36 @@
                         @auth
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ route('transactions.index') }}">
-                                    <i class="fas fa-exchange-alt me-1"></i> Transactions
+                                    <i class="fas fa-exchange-alt me-1"></i> Transaksi
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ route('debts.index') }}">
-                                    <i class="fas fa-money-bill me-1"></i> Debts
+                                    <i class="fas fa-money-bill me-1"></i> Hutang
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ route('customers.index') }}">
-                                    <i class="fas fa-users me-1"></i> Customers
+                                    <i class="fas fa-users me-1"></i> Pelanggan
                                 </a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarKaryawan" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-tie me-1"></i> Karyawan
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="navbarKaryawan">
+                                    <li><a class="dropdown-item" href="{{ route('employees.index') }}">Data Karyawan</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('employee-attendance.index') }}">Absen Karyawan</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('reports.payroll') }}">Laporan Penggajian</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('operational-expenses.index') }}">Biaya Operasional</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('employee-loans.index') }}">Pinjaman Karyawan</a></li>
+                                </ul>
                             </li>
                             <li class="nav-item">
                                 <form action="{{ route('logout') }}" method="POST" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn nav-link border-0 bg-transparent">
-                                        <i class="fas fa-sign-out-alt me-1"></i> Logout
+                                        <i class="fas fa-sign-out-alt me-1"></i> Keluar
                                     </button>
                                 </form>
                             </li>

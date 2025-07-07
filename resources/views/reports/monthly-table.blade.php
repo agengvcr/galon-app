@@ -6,18 +6,18 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Monthly Transaction Summary (Last 3 Months)</h5>
+                    <h5 class="mb-0">Ringkasan Transaksi Bulanan (3 Bulan Terakhir)</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Month</th>
-                                    <th class="text-end">Total Transactions</th>
-                                    <th class="text-end">Galon In</th>
-                                    <th class="text-end">Galon Out</th>
-                                    <th class="text-end">Total Revenue</th>
+                                    <th>Bulan</th>
+                                    <th class="text-end">Total Transaksi</th>
+                                    <th class="text-end">Galon Masuk</th>
+                                    <th class="text-end">Galon Keluar</th>
+                                    <th class="text-end">Total Pendapatan</th>
                                 </tr>
                             </thead>
                             <tbody>

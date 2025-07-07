@@ -2,10 +2,10 @@
 
 @section('content')
 <div class="container">
-    <h1>Customers</h1>
+    <h1>Pelanggan</h1>
 
     <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
-        Add New Customer
+        Tambah Pelanggan
     </button>   
 
     <div class="table-responsive">
@@ -13,10 +13,10 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Name</th>
-                    <th>Phone Number</th>
-                    <th>Address</th>
-                    <th>Actions</th>
+                    <th>Nama</th>
+                    <th>Nomor Telepon</th>
+                    <th>Alamat</th>
+                    <th>Aksi</th>
                 </tr>
             </thead>
         </table>
@@ -28,29 +28,29 @@
     <div class="modal-dialog animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addCustomerModalLabel">Add New Customer</h5>
+                <h5 class="modal-title" id="addCustomerModalLabel">Tambah Pelanggan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="addCustomerForm" action="{{ route('customers.store') }}" method="POST">
                     @csrf
                     <div class="mb-3">
-                        <label for="name" class="form-label">Name</label>
+                        <label for="name" class="form-label">Nama</label>
                         <input type="text" class="form-control" id="name" name="name" required>
                     </div>
                     <div class="mb-3">
-                        <label for="phone_number" class="form-label">Phone Number</label>
+                        <label for="phone_number" class="form-label">Nomor Telepon</label>
                         <input type="text" class="form-control" id="phone_number" name="phone_number" required>
                     </div>
                     <div class="mb-3">
-                        <label for="address" class="form-label">Address</label>
+                        <label for="address" class="form-label">Alamat</label>
                         <textarea class="form-control" id="address" name="address" required></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="submit" form="addCustomerForm" class="btn btn-primary">Save Customer</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="submit" form="addCustomerForm" class="btn btn-primary">Simpan Pelanggan</button>
             </div>
         </div>
     </div>
@@ -61,7 +61,7 @@
     <div class="modal-dialog animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editCustomerModalLabel">Edit Customer</h5>
+                <h5 class="modal-title" id="editCustomerModalLabel">Edit Pelanggan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -70,22 +70,22 @@
                     @method('PUT')
                     <input type="hidden" id="editCustomerId" name="id">
                     <div class="mb-3">
-                        <label for="editName" class="form-label">Name</label>
+                        <label for="editName" class="form-label">Nama</label>
                         <input type="text" class="form-control" id="editName" name="name" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editPhoneNumber" class="form-label">Phone Number</label>
+                        <label for="editPhoneNumber" class="form-label">Nomor Telepon</label>
                         <input type="text" class="form-control" id="editPhoneNumber" name="phone_number" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editAddress" class="form-label">Address</label>
+                        <label for="editAddress" class="form-label">Alamat</label>
                         <textarea class="form-control" id="editAddress" name="address" required></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="saveEditCustomer">Save changes</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-primary" id="saveEditCustomer">Simpan Perubahan</button>
             </div>
         </div>
     </div>

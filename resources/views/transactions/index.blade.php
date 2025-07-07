@@ -2,16 +2,16 @@
 
 @section('content')
 <div class="container">
-    <h1>Transactions</h1>
+    <h1>Transaksi</h1>
 
     <button type="button" class="btn btn-primary mb-3 me-2" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
-        Add New Transaction
+        Tambah Transaksi
     </button>   
     <button type="button" class="btn btn-success mb-3 me-2" data-bs-toggle="modal" data-bs-target="#batchTransactionModal">
-        Add Batch Transactions
+        Tambah Transaksi Massal
     </button>
     <button type="button" class="btn btn-info mb-3" data-bs-toggle="modal" data-bs-target="#summaryModal">
-        View Date Summary
+        Lihat Ringkasan Tanggal
     </button>
 
     <div class="table-responsive">
@@ -19,12 +19,12 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Customer</th>
-                    <th>Galon Out</th>
-                    <th>Galon In</th>
-                    <th>Date</th>
-                    <th>Total Price</th>
-                    <th>Actions</th>
+                    <th>Pelanggan</th>
+                    <th>Galon Keluar</th>
+                    <th>Galon Masuk</th>
+                    <th>Tanggal</th>
+                    <th>Total Harga</th>
+                    <th>Aksi</th>
                 </tr>
             </thead>
         </table>
@@ -36,39 +36,39 @@
     <div class="modal-dialog animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addTransactionModalLabel">Add New Transaction</h5>
+                <h5 class="modal-title" id="addTransactionModalLabel">Tambah Transaksi</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="addTransactionForm" action="{{ route('transactions.store') }}" method="POST">
                     @csrf
                     <div class="mb-3">
-                        <label for="customer_id" class="form-label">Customer</label>
+                        <label for="customer_id" class="form-label">Pelanggan</label>
                         <select class="form-select" id="customer_id" name="customer_id" required style="width: 100%;">
                             <!-- Options will be loaded via AJAX -->
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="galon_out" class="form-label">Galon Out</label>
+                        <label for="galon_out" class="form-label">Galon Keluar</label>
                         <input type="number" class="form-control" id="galon_out" name="galon_out" required>
                     </div>
                     <div class="mb-3">
-                        <label for="galon_in" class="form-label">Galon In</label>
+                        <label for="galon_in" class="form-label">Galon Masuk</label>
                         <input type="number" class="form-control" id="galon_in" name="galon_in" required>
                     </div>
                     <div class="mb-3">
-                        <label for="transaction_date" class="form-label">Date</label>
+                        <label for="transaction_date" class="form-label">Tanggal</label>
                         <input type="date" class="form-control" id="transaction_date" name="transaction_date" required>
                     </div>
                     <div class="mb-3">
-                        <label for="total_price" class="form-label">Total Price</label>
+                        <label for="total_price" class="form-label">Total Harga</label>
                         <input type="number" step="0.01" class="form-control" id="total_price" name="total_price" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="submit" form="addTransactionForm" class="btn btn-primary">Save Transaction</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="submit" form="addTransactionForm" class="btn btn-primary">Simpan Transaksi</button>
             </div>
         </div>
     </div>
@@ -79,7 +79,7 @@
     <div class="modal-dialog animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editTransactionModalLabel">Edit Transaction</h5>
+                <h5 class="modal-title" id="editTransactionModalLabel">Edit Transaksi</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -88,31 +88,31 @@
                     @method('PUT')
                     <input type="hidden" id="editTransactionId" name="id">
                     <div class="mb-3">
-                        <label for="editCustomerName" class="form-label">Customer</label>
+                        <label for="editCustomerName" class="form-label">Pelanggan</label>
                         <input type="text" class="form-control" id="editCustomerName" readonly>
                         <input type="hidden" id="editCustomerId" name="customer_id">
                     </div>
                     <div class="mb-3">
-                        <label for="editGalonOut" class="form-label">Galon Out</label>
+                        <label for="editGalonOut" class="form-label">Galon Keluar</label>
                         <input type="number" class="form-control" id="editGalonOut" name="galon_out" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editGalonIn" class="form-label">Galon In</label>
+                        <label for="editGalonIn" class="form-label">Galon Masuk</label>
                         <input type="number" class="form-control" id="editGalonIn" name="galon_in" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editTransactionDate" class="form-label">Date</label>
+                        <label for="editTransactionDate" class="form-label">Tanggal</label>
                         <input type="date" class="form-control" id="editTransactionDate" name="transaction_date" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editTotalPrice" class="form-label">Total Price</label>
+                        <label for="editTotalPrice" class="form-label">Total Harga</label>
                         <input type="number" step="0.01" class="form-control" id="editTotalPrice" name="total_price" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="saveEditTransaction">Save changes</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-primary" id="saveEditTransaction">Simpan Perubahan</button>
             </div>
         </div>
     </div>
@@ -123,7 +123,7 @@
     <div class="modal-dialog modal-xl animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="batchTransactionModalLabel">Add Batch Transactions</h5>
+                <h5 class="modal-title" id="batchTransactionModalLabel">Tambah Transaksi Massal</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -133,12 +133,12 @@
                         <!-- Batch transaction rows will be added here dynamically -->
                     </div>
                   
-                    <button type="button" class="btn btn-secondary mt-3" id="addBatchRow">Add Row</button>
+                    <button type="button" class="btn btn-secondary mt-3" id="addBatchRow">Tambah Baris</button>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="submit" form="batchTransactionForm" class="btn btn-primary">Save Batch Transactions</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="submit" form="batchTransactionForm" class="btn btn-primary">Simpan Transaksi Massal</button>
             </div>
         </div>
     </div>
@@ -149,33 +149,33 @@
     <div class="modal-dialog modal-lg animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="summaryModalLabel">Transaction Summary by Date</h5>
+                <h5 class="modal-title" id="summaryModalLabel">Ringkasan Transaksi per Tanggal</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row mb-3">
                     <div class="col-md-5">
-                        <label for="startDate" class="form-label">Start Date</label>
+                        <label for="startDate" class="form-label">Tanggal Mulai</label>
                         <input type="date" class="form-control" id="startDate">
                     </div>
                     <div class="col-md-5">
-                        <label for="endDate" class="form-label">End Date</label>
+                        <label for="endDate" class="form-label">Tanggal Selesai</label>
                         <input type="date" class="form-control" id="endDate">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">&nbsp;</label>
-                        <button class="btn btn-primary w-100" id="fetchSummary">Fetch</button>
+                        <button class="btn btn-primary w-100" id="fetchSummary">Ambil</button>
                     </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-bordered" id="summaryTable">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Total Transactions</th>
-                                <th>Total Galon Out</th>
-                                <th>Total Galon In</th>
-                                <th>Total Revenue</th>
+                                <th>Tanggal</th>
+                                <th>Total Transaksi</th>
+                                <th>Total Galon Keluar</th>
+                                <th>Total Galon Masuk</th>
+                                <th>Total Pendapatan</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -185,7 +185,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
             </div>
         </div>
     </div>

@@ -87,18 +87,18 @@
 
 @section('content')
 <div class="container">
-    <h1>Debt Management</h1>
+    <h1>Manajemen Hutang</h1>
 
     <!-- Action Buttons -->
     <div class="mb-3">
         <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addDebtModal">
-            Add New Debt
+            Tambah Hutang
         </button>
         <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#debtSummaryModal">
-            View Summary
+            Lihat Ringkasan
         </button>
         <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#overdueDebtsModal">
-            Overdue Debts
+            Hutang Jatuh Tempo
         </button>
     </div>
 
@@ -107,7 +107,7 @@
         <div class="col-lg-3 col-md-6 col-sm-12 mb-3">
             <div class="card bg-primary text-white h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title fs-6">Total Outstanding</h5>
+                    <h5 class="card-title fs-6">Total Belum Lunas</h5>
                     <h3 class="card-text fs-4" id="totalOutstanding">Loading...</h3>
                 </div>
             </div>
@@ -115,7 +115,7 @@
         <div class="col-lg-3 col-md-6 col-sm-12 mb-3">
             <div class="card bg-success text-white h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title fs-6">Total Paid</h5>
+                    <h5 class="card-title fs-6">Total Terbayar</h5>
                     <h3 class="card-text fs-4" id="totalPaid">Loading...</h3>
                 </div>
             </div>
@@ -123,7 +123,7 @@
         <div class="col-lg-3 col-md-6 col-sm-12 mb-3">
             <div class="card bg-warning text-white h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title fs-6">Overdue Debts</h5>
+                    <h5 class="card-title fs-6">Hutang Jatuh Tempo</h5>
                     <h3 class="card-text fs-4" id="overdueCount">Loading...</h3>
                 </div>
             </div>
@@ -131,7 +131,7 @@
         <div class="col-lg-3 col-md-6 col-sm-12 mb-3">
             <div class="card bg-info text-white h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title fs-6">Active Debts</h5>
+                    <h5 class="card-title fs-6">Hutang Aktif</h5>
                     <h3 class="card-text fs-4" id="activeDebts">Loading...</h3>
                 </div>
             </div>
@@ -144,13 +144,13 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Customer</th>
-                    <th>Amount</th>
-                    <th>Paid</th>
-                    <th>Remaining</th>
-                    <th>Due Date</th>
+                    <th>Pelanggan</th>
+                    <th>Jumlah</th>
+                    <th>Terbayar</th>
+                    <th>Sisa</th>
+                    <th>Tanggal Jatuh Tempo</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>Aksi</th>
                 </tr>
             </thead>
         </table>
@@ -162,7 +162,7 @@
     <div class="modal-dialog animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Debt</h5>
+                <h5 class="modal-title">Tambah Hutang</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -170,7 +170,7 @@
                     @csrf
                     <div class="row">
                         <div class="col-md-12 mb-3">
-                            <label for="customer_id" class="form-label">Customer</label>
+                            <label for="customer_id" class="form-label">Pelanggan</label>
                             <select class="form-select" id="customer_id" name="customer_id" required>
                                 <!-- Options will be loaded via AJAX -->
                             </select>
@@ -179,29 +179,29 @@
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="amount" class="form-label">Amount</label>
+                            <label for="amount" class="form-label">Jumlah</label>
                             <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
                             <div class="invalid-feedback">
                                 Please enter a valid amount
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="due_date" class="form-label">Due Date</label>
+                            <label for="due_date" class="form-label">Tanggal Jatuh Tempo</label>
                             <input type="date" class="form-control" id="due_date" name="due_date" required>
                             <div class="invalid-feedback">
                                 Please select a due date
                             </div>
                         </div>
                         <div class="col-12 mb-3">
-                            <label for="notes" class="form-label">Notes</label>
+                            <label for="notes" class="form-label">Catatan</label>
                             <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="submit" form="addDebtForm" class="btn btn-primary">Save Debt</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="submit" form="addDebtForm" class="btn btn-primary">Simpan Hutang</button>
             </div>
         </div>
     </div>
@@ -212,7 +212,7 @@
     <div class="modal-dialog animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Debt</h5>
+                <h5 class="modal-title">Edit Hutang</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -221,26 +221,26 @@
                     @method('PUT')
                     <input type="hidden" id="editDebtId">
                     <div class="mb-3">
-                        <label class="form-label">Customer</label>
+                        <label class="form-label">Pelanggan</label>
                         <input type="text" class="form-control" id="editCustomerName" readonly>
                     </div>
                     <div class="mb-3">
-                        <label for="editAmount" class="form-label">Amount</label>
+                        <label for="editAmount" class="form-label">Jumlah</label>
                         <input type="number" step="0.01" class="form-control" id="editAmount" name="amount" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editDueDate" class="form-label">Due Date</label>
+                        <label for="editDueDate" class="form-label">Tanggal Jatuh Tempo</label>
                         <input type="date" class="form-control" id="editDueDate" name="due_date" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editNotes" class="form-label">Notes</label>
+                        <label for="editNotes" class="form-label">Catatan</label>
                         <textarea class="form-control" id="editNotes" name="notes" rows="3"></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="saveEditDebt">Save Changes</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-primary" id="saveEditDebt">Simpan Perubahan</button>
             </div>
         </div>
     </div>
@@ -251,29 +251,29 @@
     <div class="modal-dialog animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Record Payment</h5>
+                <h5 class="modal-title">Catat Pembayaran</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="recordPaymentForm">
                     <input type="hidden" id="paymentDebtId">
                     <div class="mb-3">
-                        <label class="form-label">Customer</label>
+                        <label class="form-label">Pelanggan</label>
                         <input type="text" class="form-control" id="paymentCustomerName" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Remaining Amount</label>
+                        <label class="form-label">Sisa Jumlah</label>
                         <input type="text" class="form-control" id="remainingAmount" readonly>
                     </div>
                     <div class="mb-3">
-                        <label for="paymentAmount" class="form-label">Payment Amount</label>
+                        <label for="paymentAmount" class="form-label">Jumlah Pembayaran</label>
                         <input type="number" step="0.01" class="form-control" id="paymentAmount" name="payment_amount" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="savePayment">Record Payment</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-primary" id="savePayment">Catat Pembayaran</button>
             </div>
         </div>
     </div>
@@ -508,10 +508,9 @@ $(document).ready(function() {
                 if (data.success) {
                     const stats = data.statistics;
                     const formatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' });
-                    
                     $('#totalOutstanding').text(formatter.format(stats.total_remaining));
                     $('#totalPaid').text(formatter.format(stats.total_paid_amount));
-                    $('#overdueCount').text(stats.overdue_debts);
+                    $('#overdueCount').text(stats.overdue_debts == null ? 0 : stats.overdue_debts);
                     $('#activeDebts').text(stats.total_debts);
                 }
             })
@@ -738,7 +737,7 @@ $(document).ready(function() {
                 if (data.success) {
                     const tbody = $('#overdueTable tbody');
                     tbody.empty();
-                    
+                    console.log(data.overdue_debts);
                     if (data.overdue_debts.length === 0) {
                         tbody.append('<tr><td colspan="6" class="text-center">No overdue debts</td></tr>');
                         return;
