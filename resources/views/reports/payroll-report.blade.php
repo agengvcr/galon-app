@@ -54,7 +54,9 @@
             <tbody>
                 @forelse($gajiKaryawan as $row)
                 <tr>
-                    <td>{{ $row['employee']->name }}</td>
+                    <td>
+                        <a href="#" class="show-gaji-detail" data-employee-id="{{ $row['employee']->id }}">{{ $row['employee']->name }}</a>
+                    </td>
                     <td>{{ $row['jumlah_kehadiran'] }}</td>
                     <td>Rp {{ number_format($gajiPerKehadiran, 0, ',', '.') }}</td>
                     <td>Rp {{ number_format($row['gaji'], 0, ',', '.') }}</td>
@@ -149,4 +151,72 @@
         </table>
     </div>
 </div>
+
+{{-- Modal untuk rincian gaji per hari --}}
+<div class="modal fade" id="gajiDetailModal" tabindex="-1" aria-labelledby="gajiDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="gajiDetailModalLabel">Rincian Gaji Per Hari</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="gaji-detail-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    const employees = @json($employees);
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.show-gaji-detail').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const empId = this.getAttribute('data-employee-id');
+                const emp = employees.find(e => e.id == empId);
+                // Ambil periode dari input form
+                const dateStart = document.getElementById('date_start') ? document.getElementById('date_start').value : '';
+                const dateEnd = document.getElementById('date_end') ? document.getElementById('date_end').value : '';
+                let url = '';
+                if(dateStart && dateEnd) {
+                    url = `/reports/payroll/detail/${empId}/${dateStart}/${dateEnd}`;
+                } else {
+                    // fallback ke bulan aktif
+                    const month = document.getElementById('month') ? document.getElementById('month').value : '';
+                    const start = month ? month+'-01' : '';
+                    const end = month ? month+'-31' : '';
+                    url = `/reports/payroll/detail/${empId}/${start}/${end}`;
+                }
+                fetch(url)
+                    .then(res => res.json())
+                    .then(detail => {
+                        let html = `<strong>Nama:</strong> ${emp ? emp.name : '-'}<br><br>`;
+                        if (detail && detail.length > 0) {
+                            html += `<table class='table table-bordered'><thead><tr><th>Tanggal</th><th>Gaji Hari Itu</th><th>Galon Kirim</th><th>Total Transaksi</th><th>Pembayaran Hutang</th><th>Infak</th><th>Operasional</th><th>Pendapatan</th><th>Bersih</th></tr></thead><tbody>`;
+                            detail.forEach(function(d) {
+                                html += `<tr>
+                                    <td>${d.tanggal}</td>
+                                    <td>Rp ${parseInt(d.gaji).toLocaleString('id-ID')}</td>
+                                    <td>${d.galon_in}</td>
+                                    <td>Rp ${parseInt(d.total_transaksi).toLocaleString('id-ID')}</td>
+                                    <td>Rp ${parseInt(d.total_pembayaran_hutang).toLocaleString('id-ID')}</td>
+                                    <td>Rp ${parseInt(d.total_infak).toLocaleString('id-ID')}</td>
+                                    <td>Rp ${parseInt(d.total_operasional).toLocaleString('id-ID')}</td>
+                                    <td>Rp ${parseInt(d.total_pendapatan).toLocaleString('id-ID')}</td>
+                                    <td>Rp ${parseInt(d.total_bersih).toLocaleString('id-ID')}</td>
+                                </tr>`;
+                            });
+                            html += '</tbody></table>';
+                        } else {
+                            html += '<em>Tidak ada data kehadiran pada hari aktif.</em>';
+                        }
+                        document.getElementById('gaji-detail-content').innerHTML = html;
+                        var modal = new bootstrap.Modal(document.getElementById('gajiDetailModal'));
+                        modal.show();
+                    });
+            });
+        });
+    });
+</script>
 @endsection 

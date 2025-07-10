@@ -194,6 +194,76 @@ class ReportController extends Controller
         ));
     }
 
+    public function payrollDetail($employee, $start, $end)
+    {
+        // Ambil semua tanggal aktif (ada transaksi atau pembayaran hutang)
+        $tanggalTransaksi = DB::table('transactions')
+            ->whereBetween(DB::raw('DATE(transaction_date)'), [$start, $end])
+            ->where('is_active', true)
+            ->select(DB::raw('DATE(transaction_date) as tanggal'))
+            ->distinct()
+            ->pluck('tanggal')->toArray();
+        $tanggalHutang = DB::table('debt_payments')
+            ->whereBetween('payment_date', [$start, $end])
+            ->select(DB::raw('DATE(payment_date) as tanggal'))
+            ->distinct()
+            ->pluck('tanggal')->toArray();
+        $tanggalAktif = array_unique(array_merge($tanggalTransaksi, $tanggalHutang));
+        sort($tanggalAktif);
+
+        $detail = [];
+        foreach ($tanggalAktif as $tanggal) {
+            // Pegawai hadir?
+            $hadir = DB::table('employee_attendances')
+                ->where('employee_id', $employee)
+                ->whereDate('date', $tanggal)
+                ->exists();
+            if (!$hadir) continue;
+            // Data hari itu
+            $pendapatanHari = DB::table('transactions')
+                ->whereDate('transaction_date', $tanggal)
+                ->where('is_active', true)
+                ->sum('total_price');
+            $pembayaranHutangHari = DB::table('debt_payments')
+                ->whereDate('payment_date', $tanggal)
+                ->sum('amount');
+            $pendapatanHari += $pembayaranHutangHari;
+            $galonInHari = DB::table('transactions')
+                ->whereDate('transaction_date', $tanggal)
+                ->where('is_active', true)
+                ->sum('galon_in');
+            $infakHari = $galonInHari * 1000;
+            $operasionalHari = DB::table('operational_expenses')
+                ->whereDate('date', $tanggal)
+                ->sum('amount');
+            $pendapatanBersihHari = $pendapatanHari - $infakHari - $operasionalHari;
+            $shareKaryawanHari = $pendapatanBersihHari * 0.35;
+            // Jumlah pegawai hadir hari itu
+            $jumlahHadir = DB::table('employee_attendances')
+                ->whereDate('date', $tanggal)
+                ->count();
+            if ($jumlahHadir === 1) {
+                $gajiHariIni = $shareKaryawanHari * 0.75;
+            } elseif ($jumlahHadir > 1) {
+                $gajiHariIni = $shareKaryawanHari / $jumlahHadir;
+            } else {
+                $gajiHariIni = 0;
+            }
+            $detail[] = [
+                'tanggal' => $tanggal,
+                'gaji' => $gajiHariIni,
+                'galon_in' => $galonInHari,
+                'total_transaksi' => $pendapatanHari - $pembayaranHutangHari,
+                'total_pembayaran_hutang' => $pembayaranHutangHari,
+                'total_infak' => $infakHari,
+                'total_operasional' => $operasionalHari,
+                'total_pendapatan' => $pendapatanHari,
+                'total_bersih' => $pendapatanBersihHari,
+            ];
+        }
+        return response()->json($detail);
+    }
+
     /**
      * Laporan stok galon per customer
      */

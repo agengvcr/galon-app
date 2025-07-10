@@ -56,6 +56,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/monthly-table-data', [ReportController::class, 'getMonthlyTableData'])->name('reports.monthlyTableData');
     Route::get('/reports/payroll', [ReportController::class, 'payrollReport'])->name('reports.payroll');
     Route::get('/reports/galon-stock', [ReportController::class, 'galonStockReport'])->name('reports.galonStock');
+    Route::get('/reports/payroll/detail/{employee}/{start}/{end}', [App\Http\Controllers\ReportController::class, 'payrollDetail'])->name('reports.payrollDetail');
     
     // Home page API endpoints
     Route::get('/reports/inactive-customers', [ReportController::class, 'getInactiveCustomers'])->name('reports.inactiveCustomers');
