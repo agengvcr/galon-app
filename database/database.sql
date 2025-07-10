@@ -1,98 +1,142 @@
--- ENUM type for debts.status
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'debt_status') THEN
-        CREATE TYPE debt_status AS ENUM ('UNPAID', 'PARTIALLY_PAID', 'PAID');
-    END IF;
-END$$;
+-- USERS
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    email_verified_at TIMESTAMP NULL,
+    password VARCHAR(255) NOT NULL,
+    remember_token VARCHAR(100) NULL,
+    created_at TIMESTAMP NULL DEFAULT NULL,
+    updated_at TIMESTAMP NULL DEFAULT NULL
+);
 
+-- PASSWORD RESET TOKENS
+CREATE TABLE password_reset_tokens (
+    email VARCHAR(255) PRIMARY KEY,
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NULL
+);
+
+-- FAILED JOBS
+CREATE TABLE failed_jobs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(255) NOT NULL UNIQUE,
+    connection TEXT NOT NULL,
+    queue TEXT NOT NULL,
+    payload LONGTEXT NOT NULL,
+    exception LONGTEXT NOT NULL,
+    failed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- PERSONAL ACCESS TOKENS
+CREATE TABLE personal_access_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tokenable_type VARCHAR(255) NOT NULL,
+    tokenable_id BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    abilities TEXT NULL,
+    last_used_at TIMESTAMP NULL,
+    expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL DEFAULT NULL,
+    updated_at TIMESTAMP NULL DEFAULT NULL
+);
+
+-- CUSTOMERS
 CREATE TABLE customers (
-    id SERIAL PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     phone_number VARCHAR(20),
     address TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT true
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE transactions (
-    id SERIAL PRIMARY KEY,
-    customer_id INT NOT NULL,
-    galon_out INT NOT NULL,
-    galon_in INT NOT NULL,
-    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    total_price NUMERIC(10, 2) NOT NULL,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(id)
-);
-
-CREATE TABLE debts (
-    id SERIAL PRIMARY KEY,
-    customer_id INT NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
-    paid_amount NUMERIC(10, 2) DEFAULT 0,
-    due_date DATE,
-    status debt_status DEFAULT 'UNPAID',
-    notes TEXT,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(id)
-);
-
+-- EMPLOYEES
 CREATE TABLE employees (
-    id SERIAL PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     phone_number VARCHAR(20),
     address TEXT,
     position VARCHAR(50),
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT true
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- TRANSACTIONS
+CREATE TABLE transactions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    galon_out INT NOT NULL,
+    galon_in INT NOT NULL,
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_price DECIMAL(10,2) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+
+-- DEBTS
+CREATE TABLE debts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    paid_amount DECIMAL(10,2) DEFAULT 0,
+    due_date DATE,
+    status ENUM('UNPAID', 'PARTIALLY_PAID', 'PAID') DEFAULT 'UNPAID',
+    notes TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+
+-- EMPLOYEE ATTENDANCES
 CREATE TABLE employee_attendances (
-    id SERIAL PRIMARY KEY,
-    employee_id INT NOT NULL,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    employee_id BIGINT NOT NULL,
     date DATE NOT NULL,
     check_in TIME,
     check_out TIME,
     notes VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
 );
 
+-- OPERATIONAL EXPENSES
 CREATE TABLE operational_expenses (
-    id SERIAL PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     date DATE NOT NULL,
     description VARCHAR(255) NOT NULL,
-    amount NUMERIC(12, 2) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- EMPLOYEE LOANS
 CREATE TABLE employee_loans (
-    id SERIAL PRIMARY KEY,
-    employee_id INT NOT NULL,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    employee_id BIGINT NOT NULL,
     date DATE NOT NULL,
-    amount NUMERIC(12, 2) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
     description VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
 );
 
+-- DEBT PAYMENTS
 CREATE TABLE debt_payments (
-    id SERIAL PRIMARY KEY,
-    debt_id INT NOT NULL,
-    amount NUMERIC(12, 2) NOT NULL,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    debt_id BIGINT NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
     payment_date DATE NOT NULL,
     description VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (debt_id) REFERENCES debts(id) ON DELETE CASCADE
 );

@@ -18,6 +18,13 @@
         </div>
         <button type="submit" class="btn btn-primary btn-sm">Tampilkan</button>
     </form>
+    @php
+        $karyawanShare = $totalRevenueSetelahInfak * 0.35;
+        $pemilikShare = $totalRevenueSetelahInfak * 0.65;
+        $totalKehadiran = array_sum(array_column($gajiKaryawan, 'jumlah_kehadiran'));
+        $totalGajiKotor = array_sum(array_column($gajiKaryawan, 'gaji'));
+        $gajiPerKehadiran = $totalKehadiran > 0 ? $totalGajiKotor / $totalKehadiran : 0;
+    @endphp
     <div class="mb-3">
         <strong>Periode:</strong> {{ $periodeLabel }}<br>
         <strong>Total Pemasukan:</strong> Rp {{ number_format($totalRevenue, 0, ',', '.') }}<br>
@@ -25,7 +32,7 @@
         <strong>Bagian Pemilik (65%):</strong> Rp {{ number_format($pemilikShare, 0, ',', '.') }}<br>
         <strong>Jumlah Karyawan yang Berhak Gaji:</strong> {{ $employees->count() }}<br>
         <strong>Total Karyawan Masuk:</strong> {{ $employees->count() }}<br>
-        <strong>Gaji per Karyawan:</strong> Rp {{ number_format($gajiPerKaryawan, 0, ',', '.') }}<br>
+        <strong>Gaji per Kehadiran (hari aktif):</strong> Rp {{ number_format($gajiPerKehadiran, 0, ',', '.') }}<br>
         <strong>Total Galon Kirim:</strong> {{ $totalGalonIn ?? 0 }}<br>
         <strong>Biaya Service (Rp 1.000/galon kirim):</strong> Rp {{ number_format($totalInfak ?? 0, 0, ',', '.') }}<br>
         <strong>Total Pemasukan Setelah Biaya Service:</strong> Rp {{ number_format($totalRevenueSetelahInfak ?? 0, 0, ',', '.') }}<br>
@@ -37,6 +44,8 @@
             <thead>
                 <tr>
                     <th>Nama Karyawan</th>
+                    <th>Jumlah Kehadiran</th>
+                    <th>Gaji per Kehadiran</th>
                     <th>Gaji Kotor</th>
                     <th>Pinjaman</th>
                     <th>Gaji Bersih</th>
@@ -46,6 +55,8 @@
                 @forelse($gajiKaryawan as $row)
                 <tr>
                     <td>{{ $row['employee']->name }}</td>
+                    <td>{{ $row['jumlah_kehadiran'] }}</td>
+                    <td>Rp {{ number_format($gajiPerKehadiran, 0, ',', '.') }}</td>
                     <td>Rp {{ number_format($row['gaji'], 0, ',', '.') }}</td>
                     <td>Rp {{ number_format($row['pinjaman'], 0, ',', '.') }}</td>
                     <td>Rp {{ number_format($row['gaji_bersih'], 0, ',', '.') }}</td>

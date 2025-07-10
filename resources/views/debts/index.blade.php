@@ -271,7 +271,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                <button type="button" class="btn btn-primary" id="savePayment">Catat Pembayaran</button>
+                <button type="button" class="btn btn-primary" id="savePaymentRecord">Catat Pembayaran</button>
             </div>
         </div>
     </div>
@@ -654,8 +654,8 @@ $(document).ready(function() {
             });
     });
 
-    // Save Payment
-    $('#savePayment').on('click', function() {
+    // Save Payment (untuk recordPaymentModal)
+    $('#savePaymentRecord').on('click', function() {
         const debtId = $('#paymentDebtId').val();
         const formData = new FormData($('#recordPaymentForm')[0]);
 

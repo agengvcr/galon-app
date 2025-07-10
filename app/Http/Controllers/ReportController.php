@@ -63,96 +63,135 @@ class ReportController extends Controller
         $dateEnd = $request->input('date_end');
         $month = $request->input('month', date('Y-m'));
         if ($dateStart && $dateEnd) {
-            $totalRevenue = DB::table('transactions')
-                ->whereBetween(DB::raw('DATE(transaction_date)'), [$dateStart, $dateEnd])
-                ->where('is_active', true)
-                ->sum('total_price');
-            $totalGalonIn = DB::table('transactions')
-                ->whereBetween(DB::raw('DATE(transaction_date)'), [$dateStart, $dateEnd])
-                ->where('is_active', true)
-                ->sum('galon_in');
-            $employeeIds = DB::table('employee_attendances')
-                ->whereBetween('date', [$dateStart, $dateEnd])
-                ->distinct('employee_id')
-                ->pluck('employee_id');
-            $employees = DB::table('employees')
-                ->whereIn('id', $employeeIds)
-                ->where('is_active', true)
-                ->get();
             $periodeLabel = date('d F Y', strtotime($dateStart)) . ' s/d ' . date('d F Y', strtotime($dateEnd));
-            $operationalExpenses = DB::table('operational_expenses')
-                ->whereBetween('date', [$dateStart, $dateEnd])
-                ->orderBy('date')
-                ->get();
-            $totalDebtPayment = DB::table('debt_payments')
-                ->whereBetween('payment_date', [$dateStart, $dateEnd])
-                ->sum('amount');
-            $debtPayments = DB::table('debt_payments')
-                ->join('debts', 'debt_payments.debt_id', '=', 'debts.id')
-                ->join('customers', 'debts.customer_id', '=', 'customers.id')
-                ->select('debt_payments.*', 'customers.name as customer_name')
-                ->whereBetween('payment_date', [$dateStart, $dateEnd])
-                ->orderBy('payment_date')
-                ->get();
         } else {
-            $totalRevenue = DB::table('transactions')
-                ->whereRaw("to_char(transaction_date, 'YYYY-MM') = ?", [$month])
+            $dateStart = $month.'-01';
+            $dateEnd = $month.'-31';
+            $periodeLabel = \Carbon\Carbon::createFromFormat('Y-m', $month)->translatedFormat('F Y');
+        }
+
+        // 1. Hitung total pemasukan (transaksi + pembayaran hutang)
+        $totalRevenue = DB::table('transactions')
+            ->whereBetween(DB::raw('DATE(transaction_date)'), [$dateStart, $dateEnd])
+            ->where('is_active', true)
+            ->sum('total_price');
+        $totalDebtPayment = DB::table('debt_payments')
+            ->whereBetween('payment_date', [$dateStart, $dateEnd])
+            ->sum('amount');
+        $totalRevenue += $totalDebtPayment;
+
+        // 2. Hitung total galon masuk (untuk infak)
+        $totalGalonIn = DB::table('transactions')
+            ->whereBetween(DB::raw('DATE(transaction_date)'), [$dateStart, $dateEnd])
+            ->where('is_active', true)
+            ->sum('galon_in');
+        $totalInfak = $totalGalonIn * 1000;
+
+        // 3. Hitung total biaya operasional
+        $operationalExpenses = DB::table('operational_expenses')
+            ->whereBetween('date', [$dateStart, $dateEnd])
+            ->orderBy('date')
+            ->get();
+        $totalOperational = $operationalExpenses->sum('amount');
+
+        // 4. Hitung pendapatan bersih
+        $totalRevenueSetelahInfak = $totalRevenue - $totalInfak - $totalOperational;
+
+        // 5. Ambil semua tanggal aktif (ada transaksi atau pembayaran hutang)
+        $tanggalTransaksi = DB::table('transactions')
+            ->whereBetween(DB::raw('DATE(transaction_date)'), [$dateStart, $dateEnd])
+            ->where('is_active', true)
+            ->select(DB::raw('DATE(transaction_date) as tanggal'))
+            ->distinct()
+            ->pluck('tanggal')->toArray();
+        $tanggalHutang = DB::table('debt_payments')
+            ->whereBetween('payment_date', [$dateStart, $dateEnd])
+            ->select(DB::raw('DATE(payment_date) as tanggal'))
+            ->distinct()
+            ->pluck('tanggal')->toArray();
+        $tanggalAktif = array_unique(array_merge($tanggalTransaksi, $tanggalHutang));
+        sort($tanggalAktif);
+
+        // 6. Hitung gaji harian per pegawai
+        $gajiHarianPegawai = [];
+        foreach ($tanggalAktif as $tanggal) {
+            // Pendapatan hari itu (transaksi + pembayaran hutang)
+            $pendapatanHari = DB::table('transactions')
+                ->whereDate('transaction_date', $tanggal)
                 ->where('is_active', true)
                 ->sum('total_price');
-            $totalGalonIn = DB::table('transactions')
-                ->whereRaw("to_char(transaction_date, 'YYYY-MM') = ?", [$month])
+            $pembayaranHutangHari = DB::table('debt_payments')
+                ->whereDate('payment_date', $tanggal)
+                ->sum('amount');
+            $pendapatanHari += $pembayaranHutangHari;
+            // Infak dan operasional hari itu
+            $galonInHari = DB::table('transactions')
+                ->whereDate('transaction_date', $tanggal)
                 ->where('is_active', true)
                 ->sum('galon_in');
-            $employeeIds = DB::table('employee_attendances')
-                ->whereRaw("to_char(date, 'YYYY-MM') = ?", [$month])
-                ->distinct('employee_id')
-                ->pluck('employee_id');
-            $employees = DB::table('employees')
-                ->whereIn('id', $employeeIds)
-                ->where('is_active', true)
-                ->get();
-            $periodeLabel = \Carbon\Carbon::createFromFormat('Y-m', $month)->translatedFormat('F Y');
-            $operationalExpenses = DB::table('operational_expenses')
-                ->whereRaw("to_char(date, 'YYYY-MM') = ?", [$month])
-                ->orderBy('date')
-                ->get();
-            $totalDebtPayment = DB::table('debt_payments')
-                ->whereRaw("to_char(payment_date, 'YYYY-MM') = ?", [$month])
+            $infakHari = $galonInHari * 1000;
+            $operasionalHari = DB::table('operational_expenses')
+                ->whereDate('date', $tanggal)
                 ->sum('amount');
-            $debtPayments = DB::table('debt_payments')
-                ->join('debts', 'debt_payments.debt_id', '=', 'debts.id')
-                ->join('customers', 'debts.customer_id', '=', 'customers.id')
-                ->select('debt_payments.*', 'customers.name as customer_name')
-                ->whereRaw("to_char(payment_date, 'YYYY-MM') = ?", [$month])
-                ->orderBy('payment_date')
-                ->get();
+            $pendapatanBersihHari = $pendapatanHari - $infakHari - $operasionalHari;
+            $shareKaryawanHari = $pendapatanBersihHari * 0.35;
+            // Pegawai yang hadir hari itu
+            $absensiHari = DB::table('employee_attendances')
+                ->whereDate('date', $tanggal)
+                ->pluck('employee_id')->toArray();
+            $jumlahHadir = count($absensiHari);
+            if ($jumlahHadir === 1) {
+                $gajiHariIni = $shareKaryawanHari * 0.75;
+                $gajiHarianPegawai[$absensiHari[0]][$tanggal] = $gajiHariIni;
+            } elseif ($jumlahHadir > 1) {
+                $gajiHariIni = $shareKaryawanHari / $jumlahHadir;
+                foreach ($absensiHari as $empId) {
+                    $gajiHarianPegawai[$empId][$tanggal] = $gajiHariIni;
+                }
+            }
         }
-        $totalRevenue = $totalRevenue + $totalDebtPayment;
-        $totalInfak = $totalGalonIn * 1000;
-        $totalOperational = $operationalExpenses->sum('amount');
-        $totalRevenueSetelahInfak = $totalRevenue - $totalInfak - $totalOperational;
-        $totalKaryawan = $employees->count();
-        $karyawanShare = $totalRevenueSetelahInfak * 0.35;
-        $pemilikShare = $totalRevenueSetelahInfak * 0.65;
-        $gajiPerKaryawan = $totalKaryawan > 1 ? $karyawanShare / $totalKaryawan : $karyawanShare * 0.75;
-        // Pinjaman karyawan pada periode
-        $loans = DB::table('employee_loans')
-            ->whereIn('employee_id', $employees->pluck('id'))
-            ->whereBetween('date', [$dateStart ?? $month.'-01', $dateEnd ?? $month.'-31'])
-            ->get();
-        // Hitung gaji per karyawan setelah dipotong pinjaman
+        // 7. Akumulasi gaji pegawai selama periode
         $gajiKaryawan = [];
+        $employeeIds = array_keys($gajiHarianPegawai);
+        $employees = DB::table('employees')
+            ->whereIn('id', $employeeIds)
+            ->where('is_active', true)
+            ->get();
+        $loans = DB::table('employee_loans')
+            ->whereIn('employee_id', $employeeIds)
+            ->whereBetween('date', [$dateStart, $dateEnd])
+            ->get();
         foreach ($employees as $emp) {
+            $gajiKotor = isset($gajiHarianPegawai[$emp->id]) ? array_sum($gajiHarianPegawai[$emp->id]) : 0;
+            $jmlHadir = isset($gajiHarianPegawai[$emp->id]) ? count($gajiHarianPegawai[$emp->id]) : 0;
             $pinjaman = $loans->where('employee_id', $emp->id)->sum('amount');
-            $gajiBersih = max($gajiPerKaryawan - $pinjaman, 0);
+            $gajiBersih = max($gajiKotor - $pinjaman, 0);
             $gajiKaryawan[] = [
                 'employee' => $emp,
-                'gaji' => $gajiPerKaryawan,
+                'gaji' => $gajiKotor,
                 'pinjaman' => $pinjaman,
                 'gaji_bersih' => $gajiBersih,
+                'jumlah_kehadiran' => $jmlHadir,
             ];
         }
-        return view('reports.payroll-report', compact('month', 'dateStart', 'dateEnd', 'periodeLabel', 'totalRevenue', 'totalDebtPayment', 'debtPayments', 'totalGalonIn', 'totalInfak', 'totalOperational', 'totalRevenueSetelahInfak', 'karyawanShare', 'pemilikShare', 'gajiPerKaryawan', 'employees', 'operationalExpenses', 'loans', 'gajiKaryawan'));
+
+        // 11. Ambil data hutang dan pembayaran hutang untuk laporan
+        $debtPayments = DB::table('debt_payments')
+            ->join('debts', 'debt_payments.debt_id', '=', 'debts.id')
+            ->join('customers', 'debts.customer_id', '=', 'customers.id')
+            ->select('debt_payments.*', 'customers.name as customer_name')
+            ->whereBetween('payment_date', [$dateStart, $dateEnd])
+            ->orderBy('payment_date')
+            ->get();
+
+        return view('reports.payroll-report', compact(
+            'month', 'dateStart', 'dateEnd', 'periodeLabel',
+            'totalRevenue', 'totalDebtPayment', 'debtPayments',
+            'totalGalonIn', 'totalInfak', 'totalOperational',
+            'totalRevenueSetelahInfak',
+            'employees', 'operationalExpenses',
+            'loans', 'gajiKaryawan', 'tanggalAktif'
+        ));
     }
 
     /**
