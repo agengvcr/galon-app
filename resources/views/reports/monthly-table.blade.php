@@ -15,8 +15,8 @@
                                 <tr>
                                     <th>Bulan</th>
                                     <th class="text-end">Total Transaksi</th>
-                                    <th class="text-end">Galon Masuk</th>
-                                    <th class="text-end">Galon Keluar</th>
+                                    <th class="text-end">Galon Kirim</th>
+                                    <th class="text-end">Galon Tarik</th>
                                     <th class="text-end">Total Pendapatan</th>
                                 </tr>
                             </thead>

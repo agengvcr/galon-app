@@ -238,6 +238,15 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Modal reset handlers
+    $('#addEmployeeModal').on('show.bs.modal', function() {
+        $('#addEmployeeForm')[0].reset();
+    });
+
+    $('#editEmployeeModal').on('show.bs.modal', function() {
+        // Don't reset edit modal as it needs to be populated with data
+    });
 });
 </script>
 @endsection 

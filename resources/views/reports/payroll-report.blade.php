@@ -26,8 +26,8 @@
         <strong>Jumlah Karyawan yang Berhak Gaji:</strong> {{ $employees->count() }}<br>
         <strong>Total Karyawan Masuk:</strong> {{ $employees->count() }}<br>
         <strong>Gaji per Karyawan:</strong> Rp {{ number_format($gajiPerKaryawan, 0, ',', '.') }}<br>
-        <strong>Total Galon Masuk:</strong> {{ $totalGalonIn ?? 0 }}<br>
-        <strong>Biaya Service (Rp 1.000/galon masuk):</strong> Rp {{ number_format($totalInfak ?? 0, 0, ',', '.') }}<br>
+        <strong>Total Galon Kirim:</strong> {{ $totalGalonIn ?? 0 }}<br>
+        <strong>Biaya Service (Rp 1.000/galon kirim):</strong> Rp {{ number_format($totalInfak ?? 0, 0, ',', '.') }}<br>
         <strong>Total Pemasukan Setelah Biaya Service:</strong> Rp {{ number_format($totalRevenueSetelahInfak ?? 0, 0, ',', '.') }}<br>
         <strong>Total Biaya Operasional:</strong> Rp {{ number_format($totalOperational ?? 0, 0, ',', '.') }}<br>
         <strong>Total Pembayaran Hutang:</strong> Rp {{ number_format($totalDebtPayment ?? 0, 0, ',', '.') }}<br>

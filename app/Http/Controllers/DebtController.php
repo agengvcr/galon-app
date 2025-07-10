@@ -17,8 +17,13 @@ class DebtController extends Controller
     {
         if ($request->ajax()) {
             $table = 'debts';
-            $columns = ['id', 'customer_id', 'amount', 'paid_amount', 'due_date', 'status', 'notes'];
+            $columns = ['id', 'customer_id', 'amount', 'paid_amount', 'status', 'notes'];
             $whereConditions = [['is_active', '=', true]];
+            
+            // Add customer filter if provided
+            if ($request->has('customer_id') && $request->customer_id) {
+                $whereConditions[] = ['customer_id', '=', $request->customer_id];
+            }
 
             $response = DatatableHelper::getServerSideProcessingData($request, $table, $columns, $whereConditions);
             
@@ -46,19 +51,17 @@ class DebtController extends Controller
         $validatedData = $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'amount' => 'required|numeric|min:0',
-            'due_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
 
         try {
             DB::insert(
-                "INSERT INTO debts (customer_id, amount, paid_amount, due_date, status, notes, is_active, created_at, updated_at) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
+                "INSERT INTO debts (customer_id, amount, paid_amount, status, notes, is_active, created_at, updated_at) 
+                 VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())",
                 [
                     $validatedData['customer_id'],
                     $validatedData['amount'],
                     0, // Initial paid_amount is 0
-                    $validatedData['due_date'],
                     'UNPAID',
                     $validatedData['notes'] ?? null,
                     true
@@ -96,8 +99,24 @@ class DebtController extends Controller
             'description' => 'nullable|string|max:255',
         ]);
         $remaining = $debt->amount - $debt->paid_amount;
-        if ($validated['payment_amount'] > $remaining) {
-            return response()->json(['success' => false, 'message' => 'Jumlah pembayaran melebihi sisa hutang!'], 422);
+        
+        // Debug logging
+        \Log::info('Payment validation', [
+            'debt_id' => $id,
+            'total_amount' => $debt->amount,
+            'paid_amount' => $debt->paid_amount,
+            'remaining' => $remaining,
+            'payment_amount' => $validated['payment_amount'],
+            'is_exceed' => bccomp($validated['payment_amount'], $remaining, 2) > 0,
+            'payment_amount_type' => gettype($validated['payment_amount']),
+            'remaining_type' => gettype($remaining)
+        ]);
+        
+        if (bccomp($validated['payment_amount'], $remaining, 2) > 0) {
+            return response()->json([
+                'success' => false, 
+                'message' => "Jumlah pembayaran ({$validated['payment_amount']}) melebihi sisa hutang ({$remaining})!"
+            ], 422);
         }
         // Tambahkan ke debt_payments
         DB::table('debt_payments')->insert([
@@ -147,10 +166,8 @@ class DebtController extends Controller
             'id' => $debt->id,
             'customer_id' => $debt->customer_id,
             'customer_text' => $debt->customer_name . ' (' . $debt->customer_phone . ')',
-            'amount' => $debt->amount,
-            'paid_amount' => $debt->paid_amount,
-            'due_date' => $debt->due_date,
-            'status' => $debt->status,
+            'amount' => (float) $debt->amount,
+            'paid_amount' => (float) $debt->paid_amount,
             'notes' => $debt->notes
         ]);
     }
@@ -166,7 +183,6 @@ class DebtController extends Controller
     {
         $validatedData = $request->validate([
             'amount' => 'required|numeric|min:0',
-            'due_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
 
@@ -174,13 +190,11 @@ class DebtController extends Controller
             $updated = DB::update(
                 "UPDATE debts 
                  SET amount = ?,
-                     due_date = ?,
                      notes = ?,
                      updated_at = NOW() 
                  WHERE id = ? AND is_active = true",
                 [
                     $validatedData['amount'],
-                    $validatedData['due_date'],
                     $validatedData['notes'] ?? null,
                     $id
                 ]
@@ -391,44 +405,6 @@ class DebtController extends Controller
     }
 
     /**
-     * Get overdue debts.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function getOverdueDebts()
-    {
-        try {
-            $overdueDebts = DB::table('debts as d')
-                ->join('customers as c', 'd.customer_id', '=', 'c.id')
-                ->select(
-                    'd.id',
-                    'c.name as customer_name',
-                    'c.phone_number',
-                    'd.amount',
-                    'd.paid_amount',
-                    DB::raw('d.amount - d.paid_amount as remaining_amount'),
-                    'd.due_date',
-                    DB::raw('DATEDIFF(CURRENT_DATE, d.due_date) as days_overdue')
-                )
-                ->where('d.is_active', true)
-                ->where('d.status', '!=', 'PAID')
-                ->where('d.due_date', '<', DB::raw('CURRENT_DATE'))
-                ->orderBy('d.due_date')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'overdue_debts' => $overdueDebts
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch overdue debts: ' . $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
      * Get debt statistics.
      *
      * @return \Illuminate\Http\Response
@@ -436,19 +412,15 @@ class DebtController extends Controller
     public function getStatistics()
     {
         try {
-            $statistics = DB::selectOne(
-                "SELECT 
+            $statistics = DB::select("
+                SELECT 
                     COUNT(*) as total_debts,
-                    SUM(CASE WHEN status = 'UNPAID' THEN 1 ELSE 0 END) as unpaid_debts,
-                    SUM(CASE WHEN status = 'PARTIALLY_PAID' THEN 1 ELSE 0 END) as partially_paid_debts,
-                    SUM(CASE WHEN status = 'PAID' THEN 1 ELSE 0 END) as paid_debts,
                     SUM(amount) as total_amount,
                     SUM(paid_amount) as total_paid_amount,
-                    SUM(amount - paid_amount) as total_remaining,
-                    SUM(CASE WHEN due_date < CURRENT_DATE AND status != 'PAID' THEN 1 ELSE 0 END) as overdue_debts
+                    SUM(amount - paid_amount) as total_remaining
                 FROM debts 
-                WHERE is_active = true"
-            );
+                WHERE is_active = true
+            ")[0];
 
             return response()->json([
                 'success' => true,
@@ -457,7 +429,7 @@ class DebtController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch debt statistics: ' . $e->getMessage()
+                'message' => 'Failed to fetch statistics: ' . $e->getMessage()
             ]);
         }
     }

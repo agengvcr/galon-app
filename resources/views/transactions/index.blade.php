@@ -20,8 +20,8 @@
                 <tr>
                     <th>ID</th>
                     <th>Pelanggan</th>
-                    <th>Galon Keluar</th>
-                    <th>Galon Masuk</th>
+                    <th>Galon Tarik</th>
+                    <th>Galon Kirim</th>
                     <th>Tanggal</th>
                     <th>Total Harga</th>
                     <th>Aksi</th>
@@ -52,11 +52,11 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="galon_out" class="form-label">Galon Keluar</label>
+                        <label for="galon_out" class="form-label">Galon Tarik</label>
                         <input type="number" class="form-control" id="galon_out" name="galon_out" required>
                     </div>
                     <div class="mb-3">
-                        <label for="galon_in" class="form-label">Galon Masuk</label>
+                        <label for="galon_in" class="form-label">Galon Kirim</label>
                         <input type="number" class="form-control" id="galon_in" name="galon_in" required>
                     </div>
                     <div class="mb-3">
@@ -66,6 +66,15 @@
                     <div class="mb-3">
                         <label for="total_price" class="form-label">Total Harga</label>
                         <input type="number" step="0.01" class="form-control" id="total_price" name="total_price" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="debt_amount" class="form-label">Hutang (Opsional)</label>
+                        <input type="number" step="0.01" class="form-control" name="debt_amount" id="debt_amount" placeholder="Kosongkan jika tidak ada hutang">
+                        <small class="form-text text-muted">Jika diisi, akan otomatis menambahkan ke daftar hutang pelanggan</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="debt_notes" class="form-label">Catatan Hutang (Opsional)</label>
+                        <textarea class="form-control" name="debt_notes" id="debt_notes" rows="2" placeholder="Catatan untuk hutang (opsional)"></textarea>
                     </div>
                 </form>
             </div>
@@ -96,11 +105,11 @@
                         <input type="hidden" id="editCustomerId" name="customer_id">
                     </div>
                     <div class="mb-3">
-                        <label for="editGalonOut" class="form-label">Galon Keluar</label>
+                        <label for="editGalonOut" class="form-label">Galon Tarik</label>
                         <input type="number" class="form-control" id="editGalonOut" name="galon_out" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editGalonIn" class="form-label">Galon Masuk</label>
+                        <label for="editGalonIn" class="form-label">Galon Kirim</label>
                         <input type="number" class="form-control" id="editGalonIn" name="galon_in" required>
                     </div>
                     <div class="mb-3">
@@ -176,8 +185,8 @@
                             <tr>
                                 <th>Tanggal</th>
                                 <th>Total Transaksi</th>
-                                <th>Total Galon Keluar</th>
-                                <th>Total Galon Masuk</th>
+                                <th>Total Galon Tarik</th>
+                                <th>Total Galon Kirim</th>
                                 <th>Total Pendapatan</th>
                             </tr>
                         </thead>
@@ -264,6 +273,10 @@
             e.preventDefault();
             const form = $(this);
             const formData = new FormData(form[0]);
+            
+            // Check if debt amount is provided
+            const debtAmount = parseFloat($('#debt_amount').val()) || 0;
+            const debtNotes = $('#debt_notes').val();
 
             fetch(form.attr('action'), {
                 method: 'POST',
@@ -276,10 +289,46 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // If debt amount is provided, create debt record
+                    if (debtAmount > 0) {
+                        const debtData = new FormData();
+                        debtData.append('customer_id', $('#customer_id').val());
+                        debtData.append('amount', debtAmount);
+                        debtData.append('notes', debtNotes || 'Hutang dari transaksi');
+                        debtData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                        
+                        return fetch('/debts', {
+                            method: 'POST',
+                            body: debtData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+                    } else {
+                        return Promise.resolve({ success: true });
+                    }
+                } else {
+                    throw new Error(data.message || 'Failed to add transaction');
+                }
+            })
+            .then(response => {
+                if (response.success !== undefined) {
+                    // This is from the first transaction response
+                    return response;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
                     $('#addTransactionModal').modal('hide');
+                    let message = 'Transaction added successfully';
+                    if (debtAmount > 0) {
+                        message += ' and debt recorded';
+                    }
                     Swal.fire({
                         title: 'Success!',
-                        text: 'Transaction added successfully',
+                        text: message,
                         icon: 'success',
                         confirmButtonText: 'OK'
                     }).then((result) => {
@@ -289,7 +338,7 @@
                     });
                     form[0].reset();
                 } else {
-                    Swal.fire('Error!', data.message || 'Failed to add transaction', 'error');
+                    Swal.fire('Error!', data.message || 'Failed to add debt', 'error');
                 }
             })
             .catch(error => {
@@ -418,16 +467,22 @@
                         </select>
                     </div>
                     <div class="col-md-2 col-sm-6">
-                        <input type="number" class="form-control" name="batch[${batchRowCount}][galon_out]" placeholder="Galon Out" required>
+                        <input type="number" class="form-control" name="batch[${batchRowCount}][galon_out]" placeholder="Galon Tarik" required>
                     </div>
                     <div class="col-md-2 col-sm-6">
-                        <input type="number" class="form-control" name="batch[${batchRowCount}][galon_in]" placeholder="Galon In" required>
+                        <input type="number" class="form-control" name="batch[${batchRowCount}][galon_in]" placeholder="Galon Kirim" required>
                     </div>
                     <div class="col-md-2 col-sm-6">
                         <input type="date" class="form-control" name="batch[${batchRowCount}][transaction_date]" required>
                     </div>
                     <div class="col-md-2 col-sm-6">
                         <input type="number" step="0.01" class="form-control" name="batch[${batchRowCount}][total_price]" placeholder="Total Price" required>
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <input type="number" step="0.01" class="form-control" name="batch[${batchRowCount}][debt_amount]" placeholder="Hutang (Opsional)">
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <input type="text" class="form-control" name="batch[${batchRowCount}][debt_notes]" placeholder="Catatan Hutang">
                     </div>
                     <div class="col-md-1 col-sm-12 text-end">
                         <button type="button" class="btn btn-danger btn-sm w-100 remove-batch-row">
@@ -627,6 +682,32 @@
             } else {
                 $('#customer-galon-info').hide();
             }
+        });
+
+        // Modal reset handlers
+        $('#addTransactionModal').on('show.bs.modal', function() {
+            $('#addTransactionForm')[0].reset();
+            $('#customer_id').val('').trigger('change');
+            $('#debt_amount').val('');
+            $('#debt_notes').val('');
+            // Set default date to today
+            const now = new Date();
+            const pad = n => n.toString().padStart(2, '0');
+            const localDate = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate());
+            $('#transaction_date').val(localDate);
+        });
+
+        $('#batchTransactionModal').on('show.bs.modal', function() {
+            $('#batchTransactionForm')[0].reset();
+            $('#batchTransactions').empty();
+            batchRowCount = 0;
+            addBatchRow();
+        });
+
+        $('#summaryModal').on('show.bs.modal', function() {
+            $('#startDate').val('');
+            $('#endDate').val('');
+            $('#summaryTable tbody').empty();
         });
     });
 </script>

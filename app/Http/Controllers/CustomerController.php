@@ -22,6 +22,31 @@ class CustomerController extends Controller
 
             $response = DatatableHelper::getServerSideProcessingData($request, $table, $columns, $whereConditions);
 
+            // Tambahkan tanggal transaksi terakhir untuk setiap pelanggan
+            foreach ($response['aaData'] as &$row) {
+                $lastTransaction = DB::table('transactions')
+                    ->where('customer_id', $row->id)
+                    ->where('is_active', true)
+                    ->orderByDesc('transaction_date')
+                    ->value('transaction_date');
+                $row->last_transaction = $lastTransaction ? \Carbon\Carbon::parse($lastTransaction)->translatedFormat('d F Y') : '-';
+
+                // Tambahkan sisa hutang (jumlah hutang - jumlah pembayaran)
+                $debt = DB::table('debts')
+                    ->where('customer_id', $row->id)
+                    ->where('is_active', true)
+                    ->sum(DB::raw('amount - paid_amount'));
+                $row->outstanding_debt = $debt > 0 ? 'Rp ' . number_format($debt, 0, ',', '.') : '-';
+
+                // Tambahkan stok galon (galon kirim - galon tarik)
+                $stok = DB::table('transactions')
+                    ->where('customer_id', $row->id)
+                    ->where('is_active', true)
+                    ->selectRaw('COALESCE(SUM(galon_in),0) - COALESCE(SUM(galon_out),0) as stok')
+                    ->value('stok');
+                $row->stok_galon = $stok ?? 0;
+            }
+
             return response()->json($response);
         }
 

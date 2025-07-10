@@ -52,27 +52,25 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/transactions/customer-galon', [TransactionController::class, 'getCustomerGalon'])->name('transactions.customer-galon');
 
     // Add these routes with your existing routes
-    Route::get('/reports/chart', [ReportController::class, 'transactionChart'])->name('reports.chart');
-    Route::get('/reports/chart-data', [ReportController::class, 'getChartData'])->name('reports.chartData');
-    Route::get('/reports/price-chart', [ReportController::class, 'priceChart'])->name('reports.priceChart');
-    Route::get('/reports/price-chart-data', [ReportController::class, 'getPriceChartData'])->name('reports.priceChartData');
     Route::get('/reports/monthly-table', [ReportController::class, 'monthlyReport'])->name('reports.monthlyTable');
     Route::get('/reports/monthly-table-data', [ReportController::class, 'getMonthlyTableData'])->name('reports.monthlyTableData');
     Route::get('/reports/payroll', [ReportController::class, 'payrollReport'])->name('reports.payroll');
     Route::get('/reports/galon-stock', [ReportController::class, 'galonStockReport'])->name('reports.galonStock');
+    
+    // Home page API endpoints
+    Route::get('/reports/inactive-customers', [ReportController::class, 'getInactiveCustomers'])->name('reports.inactiveCustomers');
 
     // Debt routes
     Route::get('/debts', [DebtController::class, 'index'])->name('debts.index');
     Route::post('/debts', [DebtController::class, 'store'])->name('debts.store');
-    Route::get('/debts/{debt}/edit', [DebtController::class, 'edit'])->name('debts.edit');
-    Route::put('/debts/{debt}', [DebtController::class, 'update'])->name('debts.update');
-    Route::delete('/debts/{debt}', [DebtController::class, 'destroy'])->name('debts.destroy');
-    Route::post('/debts/{debt}/payment', [DebtController::class, 'updatePayment'])->name('debts.updatePayment');
+    Route::get('/debts/{id}/edit', [DebtController::class, 'edit'])->name('debts.edit');
+    Route::put('/debts/{id}', [DebtController::class, 'update'])->name('debts.update');
+    Route::delete('/debts/{id}', [DebtController::class, 'destroy'])->name('debts.destroy');
+    Route::post('/debts/{id}/payment', [DebtController::class, 'updatePayment'])->name('debts.updatePayment');
     Route::get('/debts/customer/{customer}', [DebtController::class, 'getCustomerDebtSummary'])->name('debts.customerSummary');
     Route::get('/debts/create', [DebtController::class, 'create'])->name('debts.create');
     Route::get('/debts/customers', [DebtController::class, 'getCustomers'])->name('debts.customers');
     Route::get('/debts/summary-by-date', [DebtController::class, 'getSummaryByDate'])->name('debts.summaryByDate');
-    Route::get('/debts/overdue', [DebtController::class, 'getOverdueDebts'])->name('debts.overdue');
     Route::get('/debts/statistics', [DebtController::class, 'getStatistics'])->name('debts.statistics');
     Route::get('/debts/{id}/payments', [DebtController::class, 'paymentHistory']);
 

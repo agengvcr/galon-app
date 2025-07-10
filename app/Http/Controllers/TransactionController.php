@@ -207,6 +207,17 @@ class TransactionController extends Controller
                     $transaction['transaction_date'],
                     $transaction['total_price']
                 ]);
+                
+                // If debt amount is provided, create debt record
+                if (isset($transaction['debt_amount']) && !empty($transaction['debt_amount']) && $transaction['debt_amount'] > 0) {
+                    $debtQuery = "INSERT INTO debts (customer_id, amount, notes, created_at, updated_at) 
+                                  VALUES (?, ?, ?, NOW(), NOW())";
+                    DB::insert($debtQuery, [
+                        $transaction['customer_id'],
+                        $transaction['debt_amount'],
+                        $transaction['debt_notes'] ?? 'Hutang dari transaksi massal'
+                    ]);
+                }
             }
             
             DB::commit();

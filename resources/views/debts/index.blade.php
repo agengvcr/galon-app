@@ -97,14 +97,26 @@
         <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#debtSummaryModal">
             Lihat Ringkasan
         </button>
-        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#overdueDebtsModal">
-            Hutang Jatuh Tempo
-        </button>
+        <a href="{{ route('debts.index') }}" class="btn btn-secondary me-2" id="clearFilterBtn" style="display: none;">
+            Hapus Filter
+        </a>
+    </div>
+
+    <!-- Customer Filter Section -->
+    <div class="alert alert-info" id="customerFilterSection" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Filter Pelanggan:</strong> <span id="filteredCustomerName"></span>
+            </div>
+            <a href="{{ route('debts.index') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-times"></i> Hapus Filter
+            </a>
+        </div>
     </div>
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 col-sm-12 mb-3">
+        <div class="col-lg-4 col-md-6 col-sm-12 mb-3">
             <div class="card bg-primary text-white h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
                     <h5 class="card-title fs-6">Total Belum Lunas</h5>
@@ -112,7 +124,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 col-sm-12 mb-3">
+        <div class="col-lg-4 col-md-6 col-sm-12 mb-3">
             <div class="card bg-success text-white h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
                     <h5 class="card-title fs-6">Total Terbayar</h5>
@@ -120,15 +132,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 col-sm-12 mb-3">
-            <div class="card bg-warning text-white h-100">
-                <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title fs-6">Hutang Jatuh Tempo</h5>
-                    <h3 class="card-text fs-4" id="overdueCount">Loading...</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 col-sm-12 mb-3">
+        <div class="col-lg-4 col-md-6 col-sm-12 mb-3">
             <div class="card bg-info text-white h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
                     <h5 class="card-title fs-6">Hutang Aktif</h5>
@@ -148,7 +152,6 @@
                     <th>Jumlah</th>
                     <th>Terbayar</th>
                     <th>Sisa</th>
-                    <th>Tanggal Jatuh Tempo</th>
                     <th>Status</th>
                     <th>Aksi</th>
                 </tr>
@@ -185,13 +188,7 @@
                                 Please enter a valid amount
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="due_date" class="form-label">Tanggal Jatuh Tempo</label>
-                            <input type="date" class="form-control" id="due_date" name="due_date" required>
-                            <div class="invalid-feedback">
-                                Please select a due date
-                            </div>
-                        </div>
+                        <!-- Removed due date input -->
                         <div class="col-12 mb-3">
                             <label for="notes" class="form-label">Catatan</label>
                             <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
@@ -228,10 +225,7 @@
                         <label for="editAmount" class="form-label">Jumlah</label>
                         <input type="number" step="0.01" class="form-control" id="editAmount" name="amount" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="editDueDate" class="form-label">Tanggal Jatuh Tempo</label>
-                        <input type="date" class="form-control" id="editDueDate" name="due_date" required>
-                    </div>
+                    <!-- Removed due date input from edit form -->
                     <div class="mb-3">
                         <label for="editNotes" class="form-label">Catatan</label>
                         <textarea class="form-control" id="editNotes" name="notes" rows="3"></textarea>
@@ -325,34 +319,7 @@
     </div>
 </div>
 
-<!-- Overdue Debts Modal -->
-<div class="modal fade animate__animated animate__fadeIn" id="overdueDebtsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg animate__animated animate__slideInDown">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Overdue Debts</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered" id="overdueTable">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Phone</th>
-                                <th>Amount</th>
-                                <th>Remaining</th>
-                                <th>Due Date</th>
-                                <th>Days Overdue</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Modal Pembayaran Hutang -->
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
@@ -447,12 +414,6 @@ $(document).ready(function() {
                 data: 'remaining_amount',
                 render: function(data) {
                     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(data);
-                }
-            },
-            { 
-                data: 'due_date',
-                render: function(data) {
-                    return new Date(data).toLocaleDateString('id-ID');
                 }
             },
             { 
@@ -585,7 +546,6 @@ $(document).ready(function() {
                     const formatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' });
                     $('#totalOutstanding').text(formatter.format(stats.total_remaining));
                     $('#totalPaid').text(formatter.format(stats.total_paid_amount));
-                    $('#overdueCount').text(stats.overdue_debts == null ? 0 : stats.overdue_debts);
                     $('#activeDebts').text(stats.total_debts);
                 }
             })
@@ -633,7 +593,6 @@ $(document).ready(function() {
                 $('#editDebtId').val(data.id);
                 $('#editCustomerName').val(data.customer_text);
                 $('#editAmount').val(data.amount);
-                $('#editDueDate').val(data.due_date.split(' ')[0]);
                 $('#editNotes').val(data.notes);
                 $('#editDebtModal').modal('show');
             })
@@ -807,42 +766,7 @@ $(document).ready(function() {
             });
     });
 
-    // Load Overdue Debts
-    function loadOverdueDebts() {
-        fetch('/debts/overdue')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const tbody = $('#overdueTable tbody');
-                    tbody.empty();
-                    console.log(data.overdue_debts);
-                    if (data.overdue_debts.length === 0) {
-                        tbody.append('<tr><td colspan="6" class="text-center">No overdue debts</td></tr>');
-                        return;
-                    }
 
-                    const formatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' });
-                    data.overdue_debts.forEach(debt => {
-                        tbody.append(`
-                            <tr>
-                                <td>${debt.customer_name}</td>
-                                <td>${debt.phone_number}</td>
-                                <td>${formatter.format(debt.amount)}</td>
-                                <td>${formatter.format(debt.remaining_amount)}</td>
-                                <td>${new Date(debt.due_date).toLocaleDateString('id-ID')}</td>
-                                <td>${debt.days_overdue} days</td>
-                            </tr>
-                        `);
-                    });
-                } else {
-                    console.error('Failed to load overdue debts:', data.message);
-                }
-            })
-            .catch(error => console.error('Error loading overdue debts:', error));
-    }
-
-    // Event Listeners for Modal Shows
-    $('#overdueDebtsModal').on('show.bs.modal', loadOverdueDebts);
     
     // Initial Load
     loadStatistics();
@@ -945,6 +869,19 @@ $(document).ready(function() {
                 $('#paymentHistoryModal').modal('show');
             });
     });
+
+    // Handle URL parameters for customer filter
+    const urlParams = new URLSearchParams(window.location.search);
+    const customerId = urlParams.get('customer_id');
+    const customerName = urlParams.get('customer_name');
+
+    if (customerId) {
+        $('#customer_id').val(customerId).trigger('change'); // Trigger change to load customer name
+        $('#customerFilterSection').show();
+        $('#filteredCustomerName').text(customerName);
+        $('#clearFilterBtn').show();
+        table.ajax.url(`{{ route('debts.index') }}?customer_id=${customerId}`).load(); // Reload table with filter
+    }
 });
 </script>
 @endsection 

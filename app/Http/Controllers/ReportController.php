@@ -9,67 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
-    public function transactionChart()
-    {
-        return view('reports.transaction-chart');
-    }
 
-    public function getChartData()
-    {
-        $currentYear = Carbon::now()->year;
-        $currentMonth = Carbon::now()->month;
-
-        $sql = "
-            SELECT 
-                transaction_date::date as date,
-                SUM(galon_in) as galon_in,
-                SUM(galon_out) as galon_out
-            FROM transactions
-            WHERE EXTRACT(YEAR FROM transaction_date) = ?
-            AND EXTRACT(MONTH FROM transaction_date) = ?
-            AND is_active = TRUE
-            GROUP BY transaction_date::date
-            ORDER BY date
-        ";
-
-        $transactions = DB::select($sql, [$currentYear, $currentMonth]);
-
-        return response()->json([
-            'labels' => array_column($transactions, 'date'),
-            'galon_in' => array_column($transactions, 'galon_in'),
-            'galon_out' => array_column($transactions, 'galon_out')
-        ]);
-    }
-
-    public function priceChart()
-    {
-        return view('reports.price-chart');
-    }
-
-    public function getPriceChartData()
-    {
-        $sql = "
-            SELECT 
-                TO_CHAR(transaction_date, 'YYYY-MM') as month,
-                SUM(total_price) as total_price,
-                COUNT(*) as transaction_count
-            FROM transactions 
-            WHERE transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
-                AND is_active = TRUE
-            GROUP BY TO_CHAR(transaction_date, 'YYYY-MM')
-            ORDER BY month ASC
-        ";
-
-        $transactions = DB::select($sql);
-
-        return response()->json([
-            'labels' => array_map(function($item) {
-                return Carbon::createFromFormat('Y-m', $item->month)->format('F Y');
-            }, $transactions),
-            'total_price' => array_column($transactions, 'total_price'),
-            'transaction_count' => array_column($transactions, 'transaction_count')
-        ]);
-    }
 
     public function monthlyReport()
     {
@@ -239,4 +179,43 @@ class ReportController extends Controller
         }
         return view('reports.galon-stock-report', ['data' => $data]);
     }
+
+    /**
+     * Pelanggan 10 hari tidak dikirim galon
+     */
+    public function getInactiveCustomers()
+    {
+        $sql = "
+            SELECT 
+                c.id,
+                c.name,
+                c.phone_number,
+                c.address,
+                MAX(t.transaction_date) as last_transaction,
+                COALESCE(SUM(t.galon_in), 0) - COALESCE(SUM(t.galon_out), 0) as stok_galon,
+                EXTRACT(DAY FROM (CURRENT_DATE - MAX(t.transaction_date))) as days_inactive
+            FROM customers c
+            LEFT JOIN transactions t ON c.id = t.customer_id AND t.is_active = true
+            WHERE c.is_active = true
+            GROUP BY c.id, c.name, c.phone_number, c.address
+            HAVING MAX(t.transaction_date) IS NULL 
+                OR EXTRACT(DAY FROM (CURRENT_DATE - MAX(t.transaction_date))) >= 10
+            ORDER BY days_inactive DESC
+        ";
+
+        $customers = DB::select($sql);
+
+        // Format the data
+        foreach ($customers as $customer) {
+            if ($customer->last_transaction) {
+                $customer->last_transaction = Carbon::parse($customer->last_transaction)->format('d F Y');
+            }
+            $customer->days_inactive = (int) $customer->days_inactive;
+            $customer->stok_galon = (int) $customer->stok_galon;
+        }
+
+        return response()->json($customers);
+    }
+
+
 } 
