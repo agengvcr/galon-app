@@ -13,6 +13,9 @@
     <button type="button" class="btn btn-info mb-3" data-bs-toggle="modal" data-bs-target="#summaryModal">
         Lihat Ringkasan Tanggal
     </button>
+    <button type="button" class="btn btn-secondary mb-3" data-bs-toggle="modal" data-bs-target="#customerByDateModal">
+        Customer Transaksi per Tanggal
+    </button>
 
     <div class="table-responsive">
         <table id="transactionsTable" class="table table-striped">
@@ -203,6 +206,57 @@
     </div>
 </div>
 
+<!-- Customer By Date Modal -->
+<div class="modal fade animate__animated animate__fadeIn" id="customerByDateModal" tabindex="-1" aria-labelledby="customerByDateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg animate__animated animate__slideInDown">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerByDateModalLabel">Daftar Customer yang Transaksi pada Range Tanggal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <label for="fromDate" class="form-label">Dari Tanggal</label>
+                        <input type="date" class="form-control" id="fromDate">
+                    </div>
+                    <div class="col-md-5">
+                        <label for="toDate" class="form-label">Sampai Tanggal</label>
+                        <input type="date" class="form-control" id="toDate">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-primary w-100" id="fetchCustomerByDate">Cari</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="customerByDateTable">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Nama Customer</th>
+                                <th>Telepon</th>
+                                <th>Alamat</th>
+                                <th>Jumlah Transaksi</th>
+                                <th>Galon Kirim</th>
+                                <th>Galon Tarik</th>
+                                <th>Jumlah Uang</th>
+                                <th>Total Bayar Utang</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data akan diisi via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -213,7 +267,7 @@
             "serverSide": true,
             "ajax": "{{ route('transactions.index') }}",
             "columns": [
-                { "data": "id" },
+                { "data": "transaction_id" },
                 { "data": "customer_name" },
                 { "data": "galon_out" },
                 { "data": "galon_in" },
@@ -233,8 +287,8 @@
                 {
                     "data": null,
                     "render": function(data, type, row) {
-                        return '<button class="btn btn-warning btn-sm edit-transaction" data-id="' + row.id + '">Edit</button> ' +
-                               '<button class="btn btn-danger btn-sm delete-transaction" data-id="' + row.id + '">Delete</button>';
+                        return '<button class="btn btn-warning btn-sm edit-transaction" data-id="' + row.transaction_id + '">Edit</button> ' +
+                               '<button class="btn btn-danger btn-sm delete-transaction" data-id="' + row.transaction_id + '">Delete</button>';
                     }
                 }
             ]
@@ -708,6 +762,50 @@
             $('#startDate').val('');
             $('#endDate').val('');
             $('#summaryTable tbody').empty();
+        });
+
+        // Customer By Date Modal
+        $('#fetchCustomerByDate').on('click', function() {
+            const fromDate = $('#fromDate').val();
+            const toDate = $('#toDate').val();
+            if (!fromDate || !toDate) {
+                Swal.fire('Error!', 'Pilih tanggal from dan to', 'error');
+                return;
+            }
+            fetch(`/transactions/customers-by-date?from=${fromDate}&to=${toDate}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const tbody = $('#customerByDateTable tbody');
+                tbody.empty();
+                if (data.success && data.customers.length > 0) {
+                    data.customers.forEach(function(row, i) {
+                        tbody.append(`
+                            <tr>
+                                <td>${i+1}</td>
+                                <td>${row.name}</td>
+                                <td>${row.phone_number || '-'}</td>
+                                <td>${row.address || '-'}</td>
+                                <td>${row.transaction_count}</td>
+                                <td>${row.total_galon_in}</td>
+                                <td>${row.total_galon_out}</td>
+                                <td>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(row.total_price)}</td>
+                                <td>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(row.total_debt_payment)}</td>
+                            </tr>
+                        `);
+                    });
+                } else {
+                    tbody.append('<tr><td colspan="9" class="text-center">Tidak ada customer transaksi di range tanggal tersebut</td></tr>');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error!', 'Terjadi kesalahan', 'error');
+            });
         });
     });
 </script>

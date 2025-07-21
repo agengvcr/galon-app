@@ -34,16 +34,16 @@ class ReportController extends Controller
     public function getMonthlyTableData()
     {
         $sql = "
-            SELECT 
-                TO_CHAR(transaction_date, 'YYYY-MM') as month,
+           SELECT 
+                DATE_FORMAT(transaction_date, '%Y-%m') as month,
                 SUM(total_price) as total_price,
                 COUNT(*) as transaction_count,
                 SUM(galon_in) as total_galon_in,
                 SUM(galon_out) as total_galon_out
             FROM transactions 
-            WHERE transaction_date >= (CURRENT_DATE - INTERVAL '3 months')
+            WHERE transaction_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH)
                 AND is_active = TRUE
-            GROUP BY TO_CHAR(transaction_date, 'YYYY-MM')
+            GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
             ORDER BY month DESC
         ";
 

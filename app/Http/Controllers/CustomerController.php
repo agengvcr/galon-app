@@ -17,10 +17,11 @@ class CustomerController extends Controller
     {
         if ($request->ajax()) {
             $table = 'customers';
-            $columns = ['name', 'phone_number', 'address'];
+            $columns = ['id', 'name', 'phone_number', 'address'];
             $whereConditions = [['is_active', '=', true]];
+            $searchColumns = ['id', 'name', 'phone_number', 'address'];
 
-            $response = DatatableHelper::getServerSideProcessingData($request, $table, $columns, $whereConditions);
+            $response = DatatableHelper::getServerSideProcessingData($request, $table, $columns, $whereConditions, [], $searchColumns);
 
             // Tambahkan tanggal transaksi terakhir untuk setiap pelanggan
             foreach ($response['aaData'] as &$row) {

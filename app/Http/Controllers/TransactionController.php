@@ -19,16 +19,41 @@ class TransactionController extends Controller
     {
         if ($request->ajax()) {
             $table = 'transactions';
-            $columns = ['id', 'customer_id', 'galon_out', 'galon_in', 'transaction_date', 'total_price'];
-            $whereConditions = [['is_active', '=', true]];
+            $joins = [
+                [
+                    'table' => 'customers',
+                    'first' => 'transactions.customer_id',
+                    'operator' => '=',
+                    'second' => 'customers.id',
+                    // 'type' => 'inner' // opsional, default 'inner'
+                ]
+            ];
+            $columns = [
+                'transactions.id as transaction_id',
+                'transactions.customer_id',
+                'transactions.galon_out',
+                'transactions.galon_in',
+                'transactions.transaction_date',
+                'transactions.total_price',
+                'customers.name as customer_name'
+            ];
+            $searchColumns = [
+                'transactions.id',
+                'transactions.customer_id',
+                'transactions.galon_out',
+                'transactions.galon_in',
+                'transactions.transaction_date',
+                'transactions.total_price',
+                'customers.name'
+            ];
+            $whereConditions = [['transactions.is_active', '=', true]];
 
-            $response = DatatableHelper::getServerSideProcessingData($request, $table, $columns, $whereConditions);
-            
-            // Fetch customer names
-            foreach ($response['aaData'] as &$row) {
-                $customer = DB::table('customers')->where('id', $row->customer_id)->first();
-                $row->customer_name = $customer ? $customer->name : 'Unknown';
-            }
+            $response = DatatableHelper::getServerSideProcessingData($request, $table, $columns, $whereConditions, $joins, $searchColumns);
+            // Tidak perlu lagi fetch customer_name manual karena sudah di-join dan di-alias
+            // foreach ($response['aaData'] as &$row) {
+            //     $customer = DB::table('customers')->where('id', $row->customer_id)->first();
+            //     $row->customer_name = $customer ? $customer->name : 'Unknown';
+            // }
 
             return response()->json($response);
         }
@@ -297,6 +322,46 @@ class TransactionController extends Controller
             'total_galon' => $total_galon,
             'total_galon_out' => $result->total_galon_out ?? 0,
             'total_galon_in' => $result->total_galon_in ?? 0,
+        ]);
+    }
+
+    public function customersByDate(Request $request)
+    {
+        $from = $request->query('from');
+        $to = $request->query('to');
+        if (!$from || !$to) {
+            return response()->json(['success' => false, 'message' => 'Tanggal from dan to wajib diisi', 'customers' => []]);
+        }
+
+        $customers = DB::table('transactions')
+            ->join('customers', 'transactions.customer_id', '=', 'customers.id')
+            ->leftJoin(DB::raw(
+                "(SELECT customer_id, SUM(debt_payments.amount) as total_debt_payment
+                  FROM debt_payments
+                  JOIN debts ON debts.id = debt_payments.debt_id
+                  WHERE DATE(payment_date) BETWEEN '" . $from . "' AND '" . $to . "'
+                  GROUP BY customer_id) as dp"
+            ), 'customers.id', '=', 'dp.customer_id')
+            ->select(
+                'customers.id',
+                'customers.name',
+                'customers.phone_number',
+                'customers.address',
+                DB::raw('COUNT(transactions.id) as transaction_count'),
+                DB::raw('COALESCE(SUM(transactions.galon_in),0) as total_galon_in'),
+                DB::raw('COALESCE(SUM(transactions.galon_out),0) as total_galon_out'),
+                DB::raw('COALESCE(SUM(transactions.total_price),0) as total_price'),
+                DB::raw('COALESCE(dp.total_debt_payment,0) as total_debt_payment')
+            )
+            ->where('transactions.is_active', true)
+            ->whereBetween('transactions.transaction_date', [$from, $to])
+            ->groupBy('customers.id', 'customers.name', 'customers.phone_number', 'customers.address', 'dp.total_debt_payment')
+            ->orderBy('transaction_count', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'customers' => $customers
         ]);
     }
 }

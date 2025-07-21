@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 class DatatableHelper
 {
-    public static function getServerSideProcessingData(Request $request, $table, $columns, $whereConditions = [])
+    public static function getServerSideProcessingData(Request $request, $table, $columns, $whereConditions = [], $joins = [], $searchColumns = [])
     {
         $draw = $request->get('draw');
         $start = $request->get("start");
@@ -25,6 +25,15 @@ class DatatableHelper
 
         // Total records
         $totalRecordsQuery = DB::table($table);
+        foreach ($joins as $join) {
+            $totalRecordsQuery->join(
+                $join['table'],
+                $join['first'],
+                $join['operator'],
+                $join['second'],
+                $join['type'] ?? 'inner'
+            );
+        }
         foreach ($whereConditions as $condition) {
             $totalRecordsQuery->where($condition[0], $condition[1], $condition[2]);
         }
@@ -32,27 +41,56 @@ class DatatableHelper
 
         // Total records with filter
         $totalRecordswithFilterQuery = DB::table($table);
+        foreach ($joins as $join) {
+            $totalRecordswithFilterQuery->join(
+                $join['table'],
+                $join['first'],
+                $join['operator'],
+                $join['second'],
+                $join['type'] ?? 'inner'
+            );
+        }
         foreach ($whereConditions as $condition) {
             $totalRecordswithFilterQuery->where($condition[0], $condition[1], $condition[2]);
         }
-        $totalRecordswithFilterQuery->where(function ($query) use ($columns, $searchValue) {
-            foreach ($columns as $column) {
-                $query->orWhere($column, 'like', '%' . $searchValue . '%');
+        $dbDriver = DB::getDriverName();
+        $totalRecordswithFilterQuery->where(function ($query) use ($searchColumns, $searchValue, $dbDriver) {
+            foreach ($searchColumns as $column) {
+                if ($dbDriver === 'pgsql') {
+                    $query->orWhereRaw('LOWER(CAST(' . $column . ' AS TEXT)) LIKE ?', ['%' . strtolower($searchValue) . '%']);
+                } else {
+                    $query->orWhere($column, 'like', '%' . $searchValue . '%');
+                }
             }
         });
         $totalRecordswithFilter = $totalRecordswithFilterQuery->count();
 
         // Fetch records
         $recordsQuery = DB::table($table);
+        foreach ($joins as $join) {
+            $recordsQuery->join(
+                $join['table'],
+                $join['first'],
+                $join['operator'],
+                $join['second'],
+                $join['type'] ?? 'inner'
+            );
+        }
         foreach ($whereConditions as $condition) {
             $recordsQuery->where($condition[0], $condition[1], $condition[2]);
         }
-        $recordsQuery->where(function ($query) use ($columns, $searchValue) {
-            foreach ($columns as $column) {
-                $query->orWhere($column, 'like', '%' . $searchValue . '%');
+        $dbDriver = DB::getDriverName();
+        $recordsQuery->where(function ($query) use ($searchColumns, $searchValue, $dbDriver) {
+            foreach ($searchColumns as $column) {
+                if ($dbDriver === 'pgsql') {
+                    $query->orWhereRaw('LOWER(CAST(' . $column . ' AS TEXT)) LIKE ?', ['%' . strtolower($searchValue) . '%']);
+                } else {
+                    $query->orWhere($column, 'like', '%' . $searchValue . '%');
+                }
             }
         });
-        $records = $recordsQuery->orderBy($columnName, $columnSortOrder)
+        $records = $recordsQuery->select($columns)
+            ->orderBy($columnName, $columnSortOrder)
             ->skip($start)
             ->take($rowperpage)
             ->get();

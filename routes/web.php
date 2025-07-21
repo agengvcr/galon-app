@@ -50,6 +50,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/transactions/customers', [TransactionController::class, 'getCustomers'])->name('transactions.customers');
     Route::get('/transactions/customer-galon', [TransactionController::class, 'getCustomerGalon'])->name('transactions.customer-galon');
+    Route::get('/transactions/customers-by-date', [App\Http\Controllers\TransactionController::class, 'customersByDate'])->name('transactions.customers-by-date');
 
     // Add these routes with your existing routes
     Route::get('/reports/monthly-table', [ReportController::class, 'monthlyReport'])->name('reports.monthlyTable');
