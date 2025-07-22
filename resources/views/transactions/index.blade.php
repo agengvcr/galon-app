@@ -32,6 +32,31 @@
             </thead>
         </table>
     </div>
+
+    <div class="mt-4">
+        <h4>Ringkasan Transaksi</h4>
+        <table class="table table-bordered">
+            <tbody>
+                <tr>
+                    <th>Total Galon Kirim</th>
+                    <td>{{ $totalGalonIn }}</td>
+                </tr>
+                <tr>
+                    <th>Total Galon Tarik</th>
+                    <td>{{ $totalGalonOut }}</td>
+                </tr>
+                <tr>
+                    <th>Total Jumlah Uang</th>
+                    <td>{{ number_format($totalPrice, 2, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <th>Total Bayar Utang</th>
+                    <td>{{ number_format($totalDebtPayment, 2, ',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
 </div>
 
 <!-- Add Transaction Modal -->
@@ -208,7 +233,7 @@
 
 <!-- Customer By Date Modal -->
 <div class="modal fade animate__animated animate__fadeIn" id="customerByDateModal" tabindex="-1" aria-labelledby="customerByDateModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg animate__animated animate__slideInDown">
+    <div class="modal-dialog modal-xl animate__animated animate__slideInDown">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="customerByDateModalLabel">Daftar Customer yang Transaksi pada Range Tanggal</h5>
@@ -234,18 +259,43 @@
                         <thead>
                             <tr>
                                 <th>No</th>
-                                <th>Nama Customer</th>
+                                <th>Tanggal</th>
+                                <th>Nama</th>
                                 <th>Telepon</th>
                                 <th>Alamat</th>
                                 <th>Jumlah Transaksi</th>
                                 <th>Galon Kirim</th>
                                 <th>Galon Tarik</th>
                                 <th>Jumlah Uang</th>
-                                <th>Total Bayar Utang</th>
+                                <th>Hutang</th>
+                                <th>Bayar Utang</th>
                             </tr>
                         </thead>
                         <tbody>
                             <!-- Data akan diisi via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4">
+                    <h4>Ringkasan</h4>
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th>Total Galon Kirim</th>
+                                <td id="totalGalonIn"></td>
+                            </tr>
+                            <tr>
+                                <th>Total Galon Tarik</th>
+                                <td id="totalGalonOut"></td>
+                            </tr>
+                            <tr>
+                                <th>Total Jumlah Uang</th>
+                                <td id="totalPrice"></td>
+                            </tr>
+                            <tr>
+                                <th>Total Bayar Utang</th>
+                                <td id="totalDebtPayment"></td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -746,7 +796,7 @@
             $('#debt_notes').val('');
             // Set default date to today
             const now = new Date();
-            const pad = n => n.toString().padStart(2, '0');
+            const pad = n => n.toString().padStart(2,'0');
             const localDate = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate());
             $('#transaction_date').val(localDate);
         });
@@ -783,10 +833,15 @@
                 const tbody = $('#customerByDateTable tbody');
                 tbody.empty();
                 if (data.success && data.customers.length > 0) {
+                    let totalGalonIn = 0;
+                    let totalGalonOut = 0;
+                    let totalPrice = 0;
+                    let totalDebtPayment = 0;
                     data.customers.forEach(function(row, i) {
                         tbody.append(`
                             <tr>
                                 <td>${i+1}</td>
+                                <td>${new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(row.transaction_date))}</td>
                                 <td>${row.name}</td>
                                 <td>${row.phone_number || '-'}</td>
                                 <td>${row.address || '-'}</td>
@@ -794,10 +849,19 @@
                                 <td>${row.total_galon_in}</td>
                                 <td>${row.total_galon_out}</td>
                                 <td>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(row.total_price)}</td>
+                                <td>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(row.total_debt_amount)}</td>
                                 <td>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(row.total_debt_payment)}</td>
                             </tr>
                         `);
+                        totalGalonIn += parseInt(row.total_galon_in);
+                        totalGalonOut += parseInt(row.total_galon_out);
+                        totalPrice += parseFloat(row.total_price);
+                        totalDebtPayment += parseFloat(row.total_debt_payment);
                     });
+                    $('#totalGalonIn').text(totalGalonIn);
+                    $('#totalGalonOut').text(totalGalonOut);
+                    $('#totalPrice').text(new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalPrice));
+                    $('#totalDebtPayment').text(new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalDebtPayment));
                 } else {
                     tbody.append('<tr><td colspan="9" class="text-center">Tidak ada customer transaksi di range tanggal tersebut</td></tr>');
                 }

@@ -59,7 +59,25 @@ class TransactionController extends Controller
         }
 
         $customers = DB::table('customers')->where('is_active', true)->get();
-        return view('transactions.index', compact('customers'));
+
+        $totalGalonIn = DB::table('transactions')
+            ->where('is_active', true)
+            ->sum('galon_in');
+
+        $totalGalonOut = DB::table('transactions')
+            ->where('is_active', true)
+            ->sum('galon_out');
+
+        $totalPrice = DB::table('transactions')
+            ->where('is_active', true)
+            ->sum('total_price');
+
+        $totalDebtPayment = DB::table('debt_payments')
+            ->join('debts', 'debts.id', '=', 'debt_payments.debt_id')
+            ->where('debts.is_active', true)
+            ->sum('debt_payments.amount');
+
+        return view('transactions.index', compact('customers', 'totalGalonIn', 'totalGalonOut', 'totalPrice', 'totalDebtPayment'));
     }
 
     /**
@@ -336,7 +354,7 @@ class TransactionController extends Controller
         $customers = DB::table('transactions')
             ->join('customers', 'transactions.customer_id', '=', 'customers.id')
             ->leftJoin(DB::raw(
-                "(SELECT customer_id, SUM(debt_payments.amount) as total_debt_payment
+                "(SELECT customer_id, SUM(debts.amount) as total_debt_amount, SUM(debt_payments.amount) as total_debt_payment
                   FROM debt_payments
                   JOIN debts ON debts.id = debt_payments.debt_id
                   WHERE DATE(payment_date) BETWEEN '" . $from . "' AND '" . $to . "'
@@ -347,15 +365,17 @@ class TransactionController extends Controller
                 'customers.name',
                 'customers.phone_number',
                 'customers.address',
+                'transaction_date',
                 DB::raw('COUNT(transactions.id) as transaction_count'),
                 DB::raw('COALESCE(SUM(transactions.galon_in),0) as total_galon_in'),
                 DB::raw('COALESCE(SUM(transactions.galon_out),0) as total_galon_out'),
                 DB::raw('COALESCE(SUM(transactions.total_price),0) as total_price'),
-                DB::raw('COALESCE(dp.total_debt_payment,0) as total_debt_payment')
+                DB::raw('COALESCE(dp.total_debt_payment,0) as total_debt_payment'),
+                DB::raw('COALESCE(dp.total_debt_amount,0) as total_debt_amount')
             )
             ->where('transactions.is_active', true)
             ->whereBetween('transactions.transaction_date', [$from, $to])
-            ->groupBy('customers.id', 'customers.name', 'customers.phone_number', 'customers.address', 'dp.total_debt_payment')
+            ->groupBy('customers.id','transaction_date', 'customers.name', 'customers.phone_number', 'customers.address', 'dp.total_debt_payment', 'dp.total_debt_amount')
             ->orderBy('transaction_count', 'desc')
             ->get();
 
