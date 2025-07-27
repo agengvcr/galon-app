@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\DatatableHelper;
+use App\Exports\CustomerDebtsExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DebtController extends Controller
 {
@@ -16,47 +18,51 @@ class DebtController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $table = 'debts';
-            $joins = [
-                [
-                    'table' => 'customers',
-                    'first' => 'debts.customer_id',
-                    'operator' => '=',
-                    'second' => 'customers.id',
-                    // 'type' => 'inner' // opsional, default 'inner'
-                ]
-            ];
+            // Use raw query to properly calculate payments from debt_payments table
+            $query = "
+                SELECT 
+                    d.id,
+                    d.created_at,
+                    d.customer_id,
+                    c.name as customer_name,
+                    d.amount,
+                    COALESCE(dp.total_paid, 0) as paid_amount,
+                    d.status,
+                    d.notes,
+                    d.amount - COALESCE(dp.total_paid, 0) as remaining_amount
+                FROM debts d
+                JOIN customers c ON d.customer_id = c.id
+                LEFT JOIN (
+                    SELECT 
+                        debt_id,
+                        SUM(amount) as total_paid
+                    FROM debt_payments
+                    GROUP BY debt_id
+                ) dp ON d.id = dp.debt_id
+                WHERE d.is_active = true
+                AND d.status <> 'PAID'
+            ";
 
-            $searchColumns = [
-                'customers.name',
-                'debts.amount',
-                'debts.status',
-                'debts.notes'
-            ];
-
-            $columns = [
-                'debts.id',
-                'debts.created_at', 
-                'debts.customer_id', 
-                'customers.name as customer_name',
-                'debts.amount', 
-                'debts.paid_amount', 
-                'debts.status', 
-                'debts.notes'];
-            $whereConditions = [['debts.is_active', '=', true]];
+            $params = [];
             
             // Add customer filter if provided
             if ($request->has('customer_id') && $request->customer_id) {
-                $whereConditions[] = ['debts.customer_id', '=', $request->customer_id];
+                $query .= " AND d.customer_id = ?";
+                $params[] = $request->customer_id;
             }
-            $whereConditions[] = ['debts.status', '<>', 'PAID'];
-
-            $response = DatatableHelper::getServerSideProcessingData($request, $table, $columns, $whereConditions, $joins, $searchColumns);
             
-            // Calculate remaining amount for each row
-            foreach ($response['aaData'] as &$row) {
-                $row->remaining_amount = $row->amount - $row->paid_amount;
-            }
+            $query .= " AND d.status <> 'PAID'";
+            $query .= " ORDER BY d.created_at DESC";
+
+            $debts = DB::select($query, $params);
+
+            // Convert to DataTable format
+            $response = [
+                'draw' => $request->input('draw', 1),
+                'recordsTotal' => count($debts),
+                'recordsFiltered' => count($debts),
+                'data' => $debts
+            ];
 
             return response()->json($response);
         }
@@ -280,13 +286,21 @@ class DebtController extends Controller
         try {
             $summary = DB::selectOne(
                 "SELECT 
-                    COUNT(*) as total_debts,
-                    SUM(amount) as total_amount,
-                    SUM(paid_amount) as total_paid,
-                    SUM(amount - paid_amount) as total_remaining
-                FROM debts 
-                WHERE customer_id = ? 
-                AND is_active = true",
+                    COUNT(d.id) as total_debts,
+                    SUM(d.amount) as total_amount,
+                    COALESCE(SUM(dp.total_paid), 0) as total_paid,
+                    SUM(d.amount) - COALESCE(SUM(dp.total_paid), 0) as total_remaining
+                FROM debts d
+                LEFT JOIN (
+                    SELECT 
+                        debt_id,
+                        SUM(amount) as total_paid
+                    FROM debt_payments
+                    GROUP BY debt_id
+                ) dp ON d.id = dp.debt_id
+                WHERE d.customer_id = ? 
+                AND d.is_active = true
+                AND d.status <> 'PAID'",
                 [$customerId]
             );
 
@@ -401,6 +415,7 @@ class DebtController extends Controller
                 ->where('is_active', true)
                 ->whereBetween(DB::raw('DATE(created_at)'), [$startDate, $endDate])
                 ->groupBy(DB::raw('DATE(created_at)'))
+                ->where('status', '<>', 'PAID')
                 ->orderBy('date')
                 ->get();
 
@@ -490,6 +505,118 @@ class DebtController extends Controller
                 'success' => false,
                 'message' => 'Failed to fetch payment history: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Get customer debts data for popup.
+     *
+     * @param int $customerId
+     * @return \Illuminate\Http\Response
+     */
+    public function getCustomerDebts($customerId)
+    {
+        try {
+            // Get customer info
+            $customer = DB::table('customers')
+                ->where('id', $customerId)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$customer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Customer not found'
+                ], 404);
+            }
+
+            // Get debts summary with proper payment calculation
+            $summary = DB::selectOne(
+                "SELECT 
+                    COUNT(d.id) as total_debts,
+                    SUM(d.amount) as total_amount,
+                    COALESCE(SUM(dp.total_paid), 0) as total_paid,
+                    SUM(d.amount) - COALESCE(SUM(dp.total_paid), 0) as total_remaining
+                FROM debts d
+                LEFT JOIN (
+                    SELECT 
+                        debt_id,
+                        SUM(amount) as total_paid
+                    FROM debt_payments
+                    GROUP BY debt_id
+                ) dp ON d.id = dp.debt_id
+                WHERE d.customer_id = ? 
+                AND d.is_active = true
+                AND d.status <> 'PAID'",
+                [$customerId]
+            );
+
+            // Get debts list with proper payment calculation
+            $debts = DB::select(
+                "SELECT 
+                    d.id,
+                    d.amount,
+                    d.status,
+                    d.notes,
+                    d.created_at,
+                    COALESCE(dp.total_paid, 0) as paid_amount,
+                    d.amount - COALESCE(dp.total_paid, 0) as remaining_amount
+                FROM debts d
+                LEFT JOIN (
+                    SELECT 
+                        debt_id,
+                        SUM(amount) as total_paid
+                    FROM debt_payments
+                    GROUP BY debt_id
+                ) dp ON d.id = dp.debt_id
+                WHERE d.customer_id = ? 
+                AND d.is_active = true
+                AND d.status <> 'PAID'
+                ORDER BY d.created_at DESC",
+                [$customerId]
+            );
+
+            return response()->json([
+                'success' => true,
+                'customer' => $customer,
+                'summary' => $summary,
+                'debts' => $debts
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch customer debts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export customer debts to Excel.
+     *
+     * @param int $customerId
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function exportCustomerDebts($customerId)
+    {
+        try {
+            // Get customer info
+            $customer = DB::table('customers')
+                ->where('id', $customerId)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$customer) {
+                abort(404, 'Customer not found');
+            }
+
+            $filename = 'hutang_' . str_replace(' ', '_', strtolower($customer->name)) . '_' . date('Y-m-d') . '.xlsx';
+
+            return Excel::download(
+                new CustomerDebtsExport($customerId, $customer->name),
+                $filename
+            );
+        } catch (\Exception $e) {
+            abort(500, 'Failed to export data: ' . $e->getMessage());
         }
     }
 } 

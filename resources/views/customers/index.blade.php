@@ -239,6 +239,62 @@
     </div>
 </div>
 
+<!-- Customer Debts Modal -->
+<div class="modal fade" id="customerDebtsModal" tabindex="-1" aria-labelledby="customerDebtsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerDebtsModalLabel">Hutang Pelanggan: <span id="customerDebtsName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="debt-summary">
+                        <h6>Ringkasan Hutang:</h6>
+                        <div class="row">                          
+                            <div class="col-md-12">
+                                <div class="card bg-warning text-white">
+                                    <div class="card-body p-2">
+                                        <small>Sisa Hutang</small>
+                                        <div id="remainingAmount">Rp 0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="export-section">
+                        <a href="#" id="exportCustomerDebtBtn" class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Export ke Excel
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table id="customerDebtsTable" class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Tanggal</th>
+                                <th>Jumlah Hutang</th>
+                                <th>Dibayar</th>
+                                <th>Sisa</th>
+                                <th>Status</th>
+                                <th>Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -266,6 +322,9 @@
                         let buttons = '<div class="btn-group btn-group-sm" role="group">';
                         buttons += '<button class="btn btn-success add-transaction" data-id="' + row.id + '" data-name="' + row.name + '" title="Tambah Transaksi"><i class="fas fa-plus"></i></button>';
                         buttons += '<button class="btn btn-warning edit-customer" data-id="' + row.id + '" title="Edit"><i class="fas fa-edit"></i></button>';
+                        
+                        // Add debt popup button
+                        buttons += '<button class="btn btn-info view-debts" data-id="' + row.id + '" data-name="' + row.name + '" title="Lihat Hutang"><i class="fas fa-credit-card"></i></button>';
                         
                         // Add debt payment button if customer has outstanding debt
                         if (row.outstanding_debt && row.outstanding_debt !== '-' && parseFloat(row.outstanding_debt.replace(/[^\d.-]/g, '')) > 0) {
@@ -669,6 +728,68 @@
         });
 
         // Hapus seluruh script terkait add-debt, select2 hutang, dan submit form hutang
+
+        // Customer Debts Popup
+        $('#customersTable').on('click', '.view-debts', function() {
+            const customerId = $(this).data('id');
+            const customerName = $(this).data('name');
+            
+            $('#customerDebtsName').text(customerName);
+            
+            // Load customer debts data
+            fetch(`/debts/customer/${customerId}/debts`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update summary cards
+                        $('#totalDebtAmount').text('Rp ' + new Intl.NumberFormat('id-ID').format(data.summary.total_amount || 0));
+                        $('#totalPaidAmount').text('Rp ' + new Intl.NumberFormat('id-ID').format(data.summary.total_paid || 0));
+                        $('#remainingAmount').text('Rp ' + new Intl.NumberFormat('id-ID').format(data.summary.total_remaining || 0));
+                        $('#totalDebtCount').text(data.summary.total_debts || 0);
+                        
+                        // Populate debts table
+                        const tbody = $('#customerDebtsTable tbody');
+                        tbody.empty();
+                        
+                        if (data.debts && data.debts.length > 0) {
+                            data.debts.forEach((debt, index) => {
+                                const statusBadge = {
+                                    'UNPAID': 'danger',
+                                    'PARTIALLY_PAID': 'warning',
+                                    'PAID': 'success'
+                                };
+                                
+                                const row = `
+                                    <tr>
+                                        <td>${index + 1}</td>
+                                        <td>${new Date(debt.created_at).toLocaleDateString('id-ID')}</td>
+                                        <td>Rp ${new Intl.NumberFormat('id-ID').format(debt.amount)}</td>
+                                        <td>Rp ${new Intl.NumberFormat('id-ID').format(debt.paid_amount)}</td>
+                                        <td>Rp ${new Intl.NumberFormat('id-ID').format(debt.remaining_amount)}</td>
+                                        <td><span class="badge bg-${statusBadge[debt.status]}">${debt.status}</span></td>
+                                        <td>${debt.notes || '-'}</td>
+                                    </tr>
+                                `;
+                                tbody.append(row);
+                            });
+                        } else {
+                            tbody.append('<tr><td colspan="7" class="text-center">Tidak ada data hutang</td></tr>');
+                        }
+                        
+                        // Set export URL
+                        const exportUrl = `/debts/export/customer/${customerId}`;
+                        $('#exportCustomerDebtBtn').attr('href', exportUrl);
+                        
+                        $('#customerDebtsModal').modal('show');
+                    } else {
+                        Swal.fire('Error!', data.message || 'Failed to load debt data', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error!', 'Failed to load debt data', 'error');
+                });
+        });
     });
 </script>
 @endsection

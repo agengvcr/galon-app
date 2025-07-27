@@ -300,16 +300,16 @@ class ReportController extends Controller
                 c.name,
                 c.phone_number,
                 c.address,
-                MAX(t.transaction_date) as last_transaction,
+                DATE_FORMAT(MAX(t.transaction_date), '%d %M %Y') as last_transaction,
                 COALESCE(SUM(t.galon_in), 0) - COALESCE(SUM(t.galon_out), 0) as stok_galon,
-                EXTRACT(DAY FROM (CURRENT_DATE - MAX(t.transaction_date))) as days_inactive
+                DATEDIFF(CURDATE(), MAX(t.transaction_date)) as days_inactive
             FROM customers c
             LEFT JOIN transactions t ON c.id = t.customer_id AND t.is_active = true
             WHERE c.is_active = true
             GROUP BY c.id, c.name, c.phone_number, c.address
             HAVING MAX(t.transaction_date) IS NULL 
-                OR EXTRACT(DAY FROM (CURRENT_DATE - MAX(t.transaction_date))) >= 10
-            ORDER BY days_inactive DESC
+                OR DATEDIFF(CURDATE(), MAX(t.transaction_date)) >= 10
+            ORDER BY days_inactive ASC
         ";
 
         $customers = DB::select($sql);

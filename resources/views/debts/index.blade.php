@@ -82,6 +82,42 @@
         font-size: 0.75rem;
         padding: 0.25rem 0.5rem;
     }
+
+    /* Customer Debt Modal Styles */
+    #customerDebtsModal .modal-dialog {
+        max-width: 900px;
+    }
+
+    #customerDebtsModal .card {
+        margin-bottom: 0.5rem;
+    }
+
+    #customerDebtsModal .card-body {
+        padding: 0.75rem;
+    }
+
+    #customerDebtsModal .card small {
+        font-size: 0.75rem;
+        opacity: 0.9;
+    }
+
+    #customerDebtsModal .card div {
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    #customerSearchSection {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        border: 1px solid #dee2e6;
+    }
+
+    #customerDebtsContent {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #dee2e6;
+    }
 </style>
 @endsection
 
@@ -96,6 +132,9 @@
         </button>
         <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#debtSummaryModal">
             Lihat Ringkasan
+        </button>
+        <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#customerDebtsModal">
+            Hutang Per Customer
         </button>
         <a href="{{ route('debts.index') }}" class="btn btn-secondary me-2" id="clearFilterBtn" style="display: none;">
             Hapus Filter
@@ -370,6 +409,83 @@
         </div>
     </div>
 </div>
+
+<!-- Customer Debts Modal -->
+<div class="modal fade" id="customerDebtsModal" tabindex="-1" aria-labelledby="customerDebtsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerDebtsModalLabel">Hutang Per Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Customer Search Section -->
+                <div class="mb-4" id="customerSearchSection">
+                    <h6>Pilih Customer:</h6>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <select class="form-select" id="customerDebtSelect" placeholder="Search customer...">
+                                <option value="">Pilih customer...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-primary" id="loadCustomerDebts">
+                                <i class="fas fa-search"></i> Lihat Hutang
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Debts Content (initially hidden) -->
+                <div id="customerDebtsContent" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="debt-summary">
+                            <h6>Ringkasan Hutang: <span id="customerDebtsName"></span></h6>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="card bg-warning text-white">
+                                        <div class="card-body p-2">
+                                            <small>Sisa Hutang</small>
+                                            <div id="totalRemainingAmount">Rp 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="export-section">
+                            <a href="#" id="exportCustomerDebtBtn" class="btn btn-success">
+                                <i class="fas fa-file-excel"></i> Export ke Excel
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table id="customerDebtsTable" class="table table-striped table-sm">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Tanggal</th>
+                                    <th>Jumlah Hutang</th>
+                                    <th>Dibayar</th>
+                                    <th>Sisa</th>
+                                    <th>Status</th>
+                                    <th>Catatan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -867,6 +983,121 @@ $(document).ready(function() {
                 tbody.append('<tr><td colspan="3" class="text-center text-danger">Gagal memuat data</td></tr>');
                 $('#paymentHistoryModal').modal('show');
             });
+    });
+
+    // Initialize Select2 for Customer Debt Select
+    $('#customerDebtSelect').select2({
+        dropdownParent: $('#customerDebtsModal'),
+        ajax: {
+            url: "{{ route('debts.customers') }}",
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {
+                    search: params.term,
+                    page: params.page || 1
+                };
+            },
+            processResults: function(data) {
+                return {
+                    results: data.results,
+                    pagination: {
+                        more: data.pagination.more
+                    }
+                };
+            },
+            cache: true
+        },
+        placeholder: 'Search customer by name or phone',
+        minimumInputLength: 1,
+        width: '100%',
+        theme: 'default',
+        language: {
+            inputTooShort: function() {
+                return 'Please enter at least 1 character';
+            },
+            noResults: function() {
+                return 'No customers found';
+            },
+            searching: function() {
+                return 'Searching...';
+            }
+        }
+    });
+
+    // Load Customer Debts
+    $('#loadCustomerDebts').on('click', function() {
+        const customerId = $('#customerDebtSelect').val();
+        const customerName = $('#customerDebtSelect option:selected').text();
+        
+        if (!customerId) {
+            Swal.fire('Error!', 'Silakan pilih customer terlebih dahulu', 'error');
+            return;
+        }
+        
+        $('#customerDebtsName').text(customerName);
+        
+        // Load customer debts data
+        fetch(`/debts/customer/${customerId}/debts`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show the content section
+                    $('#customerDebtsContent').show();
+                    
+                    // Update summary cards
+                    $('#totalDebtAmount').text('Rp ' + new Intl.NumberFormat('id-ID').format(data.summary.total_amount || 0));
+                    $('#totalPaidAmount').text('Rp ' + new Intl.NumberFormat('id-ID').format(data.summary.total_paid || 0));
+                    $('#totalRemainingAmount').text('Rp ' + new Intl.NumberFormat('id-ID').format(data.summary.total_remaining || 0));
+                    $('#totalDebtCount').text(data.summary.total_debts || 0);
+                    
+                    // Populate debts table
+                    const tbody = $('#customerDebtsTable tbody');
+                    tbody.empty();
+                    
+                    if (data.debts && data.debts.length > 0) {
+                        data.debts.forEach((debt, index) => {
+                            const statusBadge = {
+                                'UNPAID': 'danger',
+                                'PARTIALLY_PAID': 'warning',
+                                'PAID': 'success'
+                            };
+                            
+                            const row = `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${new Date(debt.created_at).toLocaleDateString('id-ID')}</td>
+                                    <td>Rp ${new Intl.NumberFormat('id-ID').format(debt.amount)}</td>
+                                    <td>Rp ${new Intl.NumberFormat('id-ID').format(debt.paid_amount)}</td>
+                                    <td>Rp ${new Intl.NumberFormat('id-ID').format(debt.remaining_amount)}</td>
+                                    <td><span class="badge bg-${statusBadge[debt.status]}">${debt.status}</span></td>
+                                    <td>${debt.notes || '-'}</td>
+                                </tr>
+                            `;
+                            tbody.append(row);
+                        });
+                    } else {
+                        tbody.append('<tr><td colspan="7" class="text-center">Tidak ada data hutang</td></tr>');
+                    }
+                    
+                    // Set export URL
+                    const exportUrl = `/debts/export/customer/${customerId}`;
+                    $('#exportCustomerDebtBtn').attr('href', exportUrl);
+                } else {
+                    Swal.fire('Error!', data.message || 'Failed to load debt data', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error!', 'Failed to load debt data', 'error');
+            });
+    });
+
+    // Reset modal when closed
+    $('#customerDebtsModal').on('hidden.bs.modal', function() {
+        $('#customerDebtSelect').val('').trigger('change');
+        $('#customerDebtsContent').hide();
+        $('#customerDebtsTable tbody').empty();
     });
 
     // Handle URL parameters for customer filter

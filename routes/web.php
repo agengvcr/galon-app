@@ -70,6 +70,8 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/debts/{id}', [DebtController::class, 'destroy'])->name('debts.destroy');
     Route::post('/debts/{id}/payment', [DebtController::class, 'updatePayment'])->name('debts.updatePayment');
     Route::get('/debts/customer/{customer}', [DebtController::class, 'getCustomerDebtSummary'])->name('debts.customerSummary');
+    Route::get('/debts/customer/{customerId}/debts', [DebtController::class, 'getCustomerDebts'])->name('debts.customerDebts');
+    Route::get('/debts/export/customer/{customerId}', [DebtController::class, 'exportCustomerDebts'])->name('debts.exportCustomerDebts');
     Route::get('/debts/create', [DebtController::class, 'create'])->name('debts.create');
     Route::get('/debts/customers', [DebtController::class, 'getCustomers'])->name('debts.customers');
     Route::get('/debts/summary-by-date', [DebtController::class, 'getSummaryByDate'])->name('debts.summaryByDate');

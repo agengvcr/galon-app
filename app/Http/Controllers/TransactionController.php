@@ -354,11 +354,21 @@ class TransactionController extends Controller
         $customers = DB::table('transactions')
             ->join('customers', 'transactions.customer_id', '=', 'customers.id')
             ->leftJoin(DB::raw(
-                "(SELECT customer_id, SUM(debts.amount) as total_debt_amount, SUM(debt_payments.amount) as total_debt_payment
-                  FROM debt_payments
-                  JOIN debts ON debts.id = debt_payments.debt_id
-                  WHERE DATE(payment_date) BETWEEN '" . $from . "' AND '" . $to . "'
-                  GROUP BY customer_id) as dp"
+                "(SELECT 
+                    d.customer_id, 
+                    SUM(d.amount) as total_debt_amount, 
+                    COALESCE(SUM(dp.total_paid), 0) as total_debt_payment
+                  FROM debts d
+                  LEFT JOIN (
+                      SELECT 
+                          debt_id,
+                          SUM(amount) as total_paid
+                      FROM debt_payments
+                      WHERE DATE(payment_date) BETWEEN '" . $from . "' AND '" . $to . "'
+                      GROUP BY debt_id
+                  ) dp ON d.id = dp.debt_id
+                  WHERE d.is_active = true
+                  GROUP BY d.customer_id) as dp"
             ), 'customers.id', '=', 'dp.customer_id')
             ->select(
                 'customers.id',

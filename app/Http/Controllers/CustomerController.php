@@ -33,11 +33,23 @@ class CustomerController extends Controller
                 $row->last_transaction = $lastTransaction ? \Carbon\Carbon::parse($lastTransaction)->translatedFormat('d F Y') : '-';
 
                 // Tambahkan sisa hutang (jumlah hutang - jumlah pembayaran)
-                $debt = DB::table('debts')
-                    ->where('customer_id', $row->id)
-                    ->where('is_active', true)
-                    ->sum(DB::raw('amount - paid_amount'));
-                $row->outstanding_debt = $debt > 0 ? 'Rp ' . number_format($debt, 0, ',', '.') : '-';
+                $debt = DB::selectOne(
+                    "SELECT 
+                        SUM(d.amount) - COALESCE(SUM(dp.total_paid), 0) as outstanding_debt
+                    FROM debts d
+                    LEFT JOIN (
+                        SELECT 
+                            debt_id,
+                            SUM(amount) as total_paid
+                        FROM debt_payments
+                        GROUP BY debt_id
+                    ) dp ON d.id = dp.debt_id
+                    WHERE d.customer_id = ? 
+                    AND d.is_active = true",
+                    [$row->id]
+                );
+                $outstandingDebt = $debt->outstanding_debt ?? 0;
+                $row->outstanding_debt = $outstandingDebt > 0 ? 'Rp ' . number_format($outstandingDebt, 0, ',', '.') : '-';
 
                 // Tambahkan stok galon (galon kirim - galon tarik)
                 $stok = DB::table('transactions')
