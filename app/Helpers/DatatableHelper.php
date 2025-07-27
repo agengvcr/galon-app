@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 class DatatableHelper
 {
-    public static function getServerSideProcessingData(Request $request, $table, $columns, $whereConditions = [], $joins = [], $searchColumns = [])
+    public static function getServerSideProcessingData(Request $request, $table, $columns, $whereConditions = [], $joins = [], $searchColumns = [], $orderColumns = [])
     {
         $draw = $request->get('draw');
         $start = $request->get("start");
@@ -89,8 +89,10 @@ class DatatableHelper
                 }
             }
         });
+        foreach ($orderColumns as $column) {
+            $recordsQuery->orderBy($column, $columnSortOrder);
+        }
         $records = $recordsQuery->select($columns)
-            ->orderBy($columnName, $columnSortOrder)
             ->skip($start)
             ->take($rowperpage)
             ->get();

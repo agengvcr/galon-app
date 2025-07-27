@@ -141,7 +141,7 @@ class ReportController extends Controller
                 ->pluck('employee_id')->toArray();
             $jumlahHadir = count($absensiHari);
             if ($jumlahHadir === 1) {
-                $gajiHariIni = $shareKaryawanHari * 0.75;
+                $gajiHariIni = $shareKaryawanHari * 0.70;
                 $gajiHarianPegawai[$absensiHari[0]][$tanggal] = $gajiHariIni;
             } elseif ($jumlahHadir > 1) {
                 $gajiHariIni = $shareKaryawanHari / $jumlahHadir;

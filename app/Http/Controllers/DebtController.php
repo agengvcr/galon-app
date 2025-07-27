@@ -17,20 +17,44 @@ class DebtController extends Controller
     {
         if ($request->ajax()) {
             $table = 'debts';
-            $columns = ['id', 'customer_id', 'amount', 'paid_amount', 'status', 'notes'];
-            $whereConditions = [['is_active', '=', true]];
+            $joins = [
+                [
+                    'table' => 'customers',
+                    'first' => 'debts.customer_id',
+                    'operator' => '=',
+                    'second' => 'customers.id',
+                    // 'type' => 'inner' // opsional, default 'inner'
+                ]
+            ];
+
+            $searchColumns = [
+                'customers.name',
+                'debts.amount',
+                'debts.status',
+                'debts.notes'
+            ];
+
+            $columns = [
+                'debts.id',
+                'debts.created_at', 
+                'debts.customer_id', 
+                'customers.name as customer_name',
+                'debts.amount', 
+                'debts.paid_amount', 
+                'debts.status', 
+                'debts.notes'];
+            $whereConditions = [['debts.is_active', '=', true]];
             
             // Add customer filter if provided
             if ($request->has('customer_id') && $request->customer_id) {
-                $whereConditions[] = ['customer_id', '=', $request->customer_id];
+                $whereConditions[] = ['debts.customer_id', '=', $request->customer_id];
             }
+            $whereConditions[] = ['debts.status', '<>', 'PAID'];
 
-            $response = DatatableHelper::getServerSideProcessingData($request, $table, $columns, $whereConditions);
+            $response = DatatableHelper::getServerSideProcessingData($request, $table, $columns, $whereConditions, $joins, $searchColumns);
             
-            // Fetch customer names
+            // Calculate remaining amount for each row
             foreach ($response['aaData'] as &$row) {
-                $customer = DB::table('customers')->where('id', $row->customer_id)->first();
-                $row->customer_name = $customer ? $customer->name : 'Unknown';
                 $row->remaining_amount = $row->amount - $row->paid_amount;
             }
 
@@ -409,18 +433,28 @@ class DebtController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function getStatistics()
+    public function getStatistics(Request $request)
     {
         try {
-            $statistics = DB::select("
-                SELECT 
-                    COUNT(*) as total_debts,
-                    SUM(amount) as total_amount,
-                    SUM(paid_amount) as total_paid_amount,
-                    SUM(amount - paid_amount) as total_remaining
-                FROM debts 
-                WHERE is_active = true
-            ")[0];
+            $query = DB::table('debts')->where('is_active', true);
+
+            if ($request->has('customer_id') && $request->customer_id) {
+                $query->where('customer_id', $request->customer_id);
+            }
+
+            $statistics = $query->selectRaw("
+                COUNT(*) as total_debts,
+                SUM(amount) as total_amount,
+                SUM(paid_amount) as total_paid_amount,
+                SUM(amount - paid_amount) as total_remaining
+            ")->first();
+
+            // If no records found, aggregation returns NULL for SUMs. Set to 0.
+            if ($statistics->total_debts == 0) {
+                $statistics->total_amount = 0;
+                $statistics->total_paid_amount = 0;
+                $statistics->total_remaining = 0;
+            }
 
             return response()->json([
                 'success' => true,

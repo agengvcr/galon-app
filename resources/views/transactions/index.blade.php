@@ -23,8 +23,8 @@
                 <tr>
                     <th>ID</th>
                     <th>Pelanggan</th>
-                    <th>Galon Tarik</th>
                     <th>Galon Kirim</th>
+                    <th>Galon Tarik</th>                  
                     <th>Tanggal</th>
                     <th>Total Harga</th>
                     <th>Aksi</th>
@@ -48,11 +48,7 @@
                 <tr>
                     <th>Total Jumlah Uang</th>
                     <td>{{ number_format($totalPrice, 2, ',', '.') }}</td>
-                </tr>
-                <tr>
-                    <th>Total Bayar Utang</th>
-                    <td>{{ number_format($totalDebtPayment, 2, ',', '.') }}</td>
-                </tr>
+                </tr>               
             </tbody>
         </table>
     </div>
@@ -264,8 +260,8 @@
                                 <th>Telepon</th>
                                 <th>Alamat</th>
                                 <th>Jumlah Transaksi</th>
-                                <th>Galon Kirim</th>
-                                <th>Galon Tarik</th>
+                                <th>Galon Kirim</th> 
+                                <th>Galon Tarik</th>                                                               
                                 <th>Jumlah Uang</th>
                                 <th>Hutang</th>
                                 <th>Bayar Utang</th>
@@ -319,8 +315,8 @@
             "columns": [
                 { "data": "transaction_id" },
                 { "data": "customer_name" },
-                { "data": "galon_out" },
                 { "data": "galon_in" },
+                { "data": "galon_out" },
                 { 
                     "data": "transaction_date",
                     "render": function(data, type, row) {

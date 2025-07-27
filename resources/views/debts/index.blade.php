@@ -116,30 +116,14 @@
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-lg-4 col-md-6 col-sm-12 mb-3">
+        <div class="col-lg-12 col-md-12 col-sm-12 mb-3">
             <div class="card bg-primary text-white h-100">
-                <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title fs-6">Total Belum Lunas</h5>
+                <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                    <h5 class="card-title fs-6">Total Hutang</h5>
                     <h3 class="card-text fs-4" id="totalOutstanding">Loading...</h3>
                 </div>
             </div>
-        </div>
-        <div class="col-lg-4 col-md-6 col-sm-12 mb-3">
-            <div class="card bg-success text-white h-100">
-                <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title fs-6">Total Terbayar</h5>
-                    <h3 class="card-text fs-4" id="totalPaid">Loading...</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4 col-md-6 col-sm-12 mb-3">
-            <div class="card bg-info text-white h-100">
-                <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title fs-6">Hutang Aktif</h5>
-                    <h3 class="card-text fs-4" id="activeDebts">Loading...</h3>
-                </div>
-            </div>
-        </div>
+        </div>    
     </div>
 
     <!-- Main Debts Table -->
@@ -148,6 +132,7 @@
             <thead>
                 <tr>
                     <th>ID</th>
+                    <th>Tanggal</th>
                     <th>Pelanggan</th>
                     <th>Jumlah</th>
                     <th>Terbayar</th>
@@ -397,6 +382,15 @@ $(document).ready(function() {
         ajax: "{{ route('debts.index') }}",
         columns: [
             { data: 'id' },
+            { 
+                data: 'created_at',
+                render: function(data) {
+                    const date = new Date(data);
+                    const day = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][date.getDay()];
+                    const dateStr = `${day}, ${date.getDate()} ${['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][date.getMonth()]} ${date.getFullYear()}`;
+                    return dateStr;
+                }
+            },
             { data: 'customer_name' },
             { 
                 data: 'amount',
@@ -538,15 +532,20 @@ $(document).ready(function() {
 
     // Load Statistics
     function loadStatistics() {
-        fetch("{{ route('debts.statistics') }}")
+        const urlParams = new URLSearchParams(window.location.search);
+        const customerId = urlParams.get('customer_id');
+        let url = "{{ route('debts.statistics') }}";
+        if (customerId) {
+            url += `?customer_id=${customerId}`;
+        }
+
+        fetch(url)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     const stats = data.statistics;
                     const formatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' });
                     $('#totalOutstanding').text(formatter.format(stats.total_remaining));
-                    $('#totalPaid').text(formatter.format(stats.total_paid_amount));
-                    $('#activeDebts').text(stats.total_debts);
                 }
             })
             .catch(error => console.error('Error loading statistics:', error));

@@ -30,9 +30,9 @@
         <strong>Total Pemasukan:</strong> Rp {{ number_format($totalRevenue, 0, ',', '.') }}<br>
         <strong>Bagian Karyawan (35%):</strong> Rp {{ number_format($karyawanShare, 0, ',', '.') }}<br>
         <strong>Bagian Pemilik (65%):</strong> Rp {{ number_format($pemilikShare, 0, ',', '.') }}<br>
-        <strong>Jumlah Karyawan yang Berhak Gaji:</strong> {{ $employees->count() }}<br>
-        <strong>Total Karyawan Masuk:</strong> {{ $employees->count() }}<br>
-        <strong>Gaji per Kehadiran (hari aktif):</strong> Rp {{ number_format($gajiPerKehadiran, 0, ',', '.') }}<br>
+        <!-- <strong>Jumlah Karyawan yang Berhak Gaji:</strong> {{ $employees->count() }}<br> -->
+        <!-- <strong>Total Karyawan Masuk:</strong> {{ $employees->count() }}<br> -->
+        <!-- <strong>Gaji per Kehadiran (hari aktif):</strong> Rp {{ number_format($gajiPerKehadiran, 0, ',', '.') }}<br> -->
         <strong>Total Galon Kirim:</strong> {{ $totalGalonIn ?? 0 }}<br>
         <strong>Biaya Service (Rp 1.000/galon kirim):</strong> Rp {{ number_format($totalInfak ?? 0, 0, ',', '.') }}<br>
         <strong>Total Pemasukan Setelah Biaya Service:</strong> Rp {{ number_format($totalRevenueSetelahInfak ?? 0, 0, ',', '.') }}<br>

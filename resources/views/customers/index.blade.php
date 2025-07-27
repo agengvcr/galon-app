@@ -162,13 +162,13 @@
             Total galon pelanggan: <span id="customer-galon-value">0</span>
           </div>
           <div class="mb-3">
-            <label for="galon_out" class="form-label">Galon Tarik</label>
-            <input type="number" class="form-control" name="galon_out" id="galon_out" required>
-          </div>
-          <div class="mb-3">
             <label for="galon_in" class="form-label">Galon Kirim</label>
             <input type="number" class="form-control" name="galon_in" id="galon_in" required>
           </div>
+          <div class="mb-3">
+            <label for="galon_out" class="form-label">Galon Tarik</label>
+            <input type="number" class="form-control" name="galon_out" id="galon_out" required>
+          </div>          
           <div class="mb-3">
             <label for="transaction_date" class="form-label">Tanggal Transaksi</label>
             <input type="date" class="form-control" name="transaction_date" id="transaction_date" required>
