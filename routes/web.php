@@ -77,6 +77,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/debts/summary-by-date', [DebtController::class, 'getSummaryByDate'])->name('debts.summaryByDate');
     Route::get('/debts/statistics', [DebtController::class, 'getStatistics'])->name('debts.statistics');
     Route::get('/debts/{id}/payments', [DebtController::class, 'paymentHistory']);
+    Route::get('/debts/total-summary', [DebtController::class, 'getTotalDebtSummary'])->name('debts.totalSummary');
+    Route::get('/debts/export-total-summary', [DebtController::class, 'exportTotalDebtSummary'])->name('debts.exportTotalSummary');
 
     // Employee routes
     Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');

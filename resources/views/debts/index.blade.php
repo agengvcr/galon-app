@@ -136,6 +136,9 @@
         <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#customerDebtsModal">
             Hutang Per Customer
         </button>
+        <button type="button" class="btn btn-warning me-2" id="showTotalDebtBtn">
+            Total Hutang Semua Customer
+        </button>
         <a href="{{ route('debts.index') }}" class="btn btn-secondary me-2" id="clearFilterBtn" style="display: none;">
             Hapus Filter
         </a>
@@ -344,6 +347,48 @@
 </div>
 
 
+
+<!-- Total Debt Modal -->
+<div class="modal fade" id="totalDebtModal" tabindex="-1" aria-labelledby="totalDebtModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="totalDebtModalLabel">Total Hutang Semua Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h4>Total Keseluruhan: <span id="totalDebtAmountValue">Memuat...</span></h4>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Nama Customer</th>
+                                    <th>Total Hutang</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customerDebtsTableBody">
+                                <tr>
+                                    <td colspan="2" class="text-center">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="exportTotalDebtBtn">
+                    <i class="fas fa-file-excel"></i> Export ke Excel
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Pembayaran Hutang -->
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
@@ -1112,6 +1157,61 @@ $(document).ready(function() {
         $('#clearFilterBtn').show();
         table.ajax.url(`{{ route('debts.index') }}?customer_id=${customerId}`).load(); // Reload table with filter
     }
+
+    // Handle show total debt button click
+    $('#showTotalDebtBtn').on('click', function() {
+        const totalDebtModal = new bootstrap.Modal(document.getElementById('totalDebtModal'));
+        const totalDebtAmountValue = $('#totalDebtAmountValue');
+        const customerDebtsTableBody = $('#customerDebtsTableBody');
+        
+        // Reset modal content
+        totalDebtAmountValue.text('Memuat...');
+        customerDebtsTableBody.html('<tr><td colspan="2" class="text-center">Memuat data...</td></tr>');
+        totalDebtModal.show();
+
+        fetch('{{ route('debts.totalSummary') }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Display total amount
+                    const formattedTotalAmount = 'Rp ' + new Intl.NumberFormat('id-ID').format(data.total_remaining || 0);
+                    totalDebtAmountValue.text(formattedTotalAmount);
+                    
+                    // Display customer debts
+                    if (data.customer_debts && data.customer_debts.length > 0) {
+                        let tableRows = '';
+                        data.customer_debts.forEach(customer => {
+                            const formattedAmount = 'Rp ' + new Intl.NumberFormat('id-ID').format(customer.total_remaining || 0);
+                            tableRows += `
+                                <tr>
+                                    <td>${customer.customer_name}</td>
+                                    <td>${formattedAmount}</td>
+                                </tr>
+                            `;
+                        });
+                        customerDebtsTableBody.html(tableRows);
+                    } else {
+                        customerDebtsTableBody.html('<tr><td colspan="2" class="text-center">Tidak ada data hutang</td></tr>');
+                    }
+                } else {
+                    totalDebtAmountValue.text('Gagal memuat data');
+                    customerDebtsTableBody.html('<tr><td colspan="2" class="text-center">Gagal memuat data</td></tr>');
+                    Swal.fire('Error!', data.message || 'Gagal mengambil data total hutang.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                totalDebtAmountValue.text('Gagal memuat data');
+                customerDebtsTableBody.html('<tr><td colspan="2" class="text-center">Gagal memuat data</td></tr>');
+                Swal.fire('Error!', 'Terjadi kesalahan saat mengambil data.', 'error');
+            });
+    });
+
+    // Handle export total debt summary to Excel
+    $('#exportTotalDebtBtn').on('click', function() {
+        // Redirect to export route
+        window.location.href = '{{ route('debts.exportTotalSummary') }}';
+    });
 });
 </script>
 @endsection 

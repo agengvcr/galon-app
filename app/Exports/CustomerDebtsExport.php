@@ -6,13 +6,12 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class CustomerDebtsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithColumnWidths
+class CustomerDebtsExport implements FromCollection, WithHeadings, WithMapping, WithEvents
 {
     protected $customerId;
     protected $customerName;
@@ -25,31 +24,24 @@ class CustomerDebtsExport implements FromCollection, WithHeadings, WithMapping, 
 
     public function collection()
     {
-        $debts = DB::select(
-            "SELECT 
-                d.id,
-                d.amount,
-                d.status,
-                d.notes,
-                d.created_at,
-                COALESCE(dp.total_paid, 0) as paid_amount,
-                d.amount - COALESCE(dp.total_paid, 0) as remaining_amount
-            FROM debts d
-            LEFT JOIN (
-                SELECT 
-                    debt_id,
-                    SUM(amount) as total_paid
-                FROM debt_payments
-                GROUP BY debt_id
-            ) dp ON d.id = dp.debt_id
-            WHERE d.customer_id = ? 
-            AND d.is_active = true
-            AND d.status <> 'PAID'
-            ORDER BY d.created_at DESC",
-            [$this->customerId]
-        );
-        
-        return collect($debts);
+        // Use Query Builder for a cleaner and more secure approach
+        return DB::table('debts as d')
+            ->select([
+                'd.id',
+                'd.amount',
+                'd.status',
+                'd.notes',
+                'd.created_at',
+                DB::raw('COALESCE(SUM(dp.amount), 0) as paid_amount'),
+                DB::raw('d.amount - COALESCE(SUM(dp.amount), 0) as remaining_amount')
+            ])
+            ->leftJoin('debt_payments as dp', 'd.id', '=', 'dp.debt_id')
+            ->where('d.customer_id', $this->customerId)
+            ->where('d.is_active', true)
+            ->where('d.status', '<>', 'PAID')
+            ->groupBy('d.id', 'd.amount', 'd.status', 'd.notes', 'd.created_at')
+            ->orderBy('d.created_at', 'desc')
+            ->get();
     }
 
     public function headings(): array
@@ -74,95 +66,48 @@ class CustomerDebtsExport implements FromCollection, WithHeadings, WithMapping, 
             date('d/m/Y', strtotime($debt->created_at)),
             $debt->amount,
             $debt->paid_amount,
-           $debt->remaining_amount,
+            $debt->remaining_amount,
             $debt->status,
             $debt->notes ?? '-'
         ];
     }
 
-    public function styles(Worksheet $sheet)
-    {
-        // Header styles
-        $sheet->getStyle('A1:G1')->applyFromArray([
-            'font' => [
-                'bold' => true,
-                'color' => ['rgb' => 'FFFFFF'],
-            ],
-            'fill' => [
-                'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '4472C4'],
-            ],
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical' => Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        // Auto-size columns
-        foreach (range('A', 'G') as $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
-        }
-
-        // Add borders to all cells
-        $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle("A1:G{$lastRow}")->applyFromArray([
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000'],
-                ],
-            ],
-        ]);
-
-        // Center align number columns
-        $sheet->getStyle("C2:E{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle("A2:A{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-        // Add customer name as title
-        if ($this->customerName) {
-            $sheet->insertNewRowBefore(1, 2);
-            $sheet->mergeCells('A1:G1');
-            $sheet->setCellValue('A1', 'HUTANG PELANGGAN: ' . strtoupper($this->customerName));
-            $sheet->getStyle('A1')->applyFromArray([
-                'font' => [
-                    'bold' => true,
-                    'size' => 14,
-                ],
-                'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_CENTER,
-                ],
-            ]);
-            
-            // Adjust row numbers
-            $sheet->getStyle("A3:G3")->applyFromArray([
-                'font' => [
-                    'bold' => true,
-                    'color' => ['rgb' => 'FFFFFF'],
-                ],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => '4472C4'],
-                ],
-                'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical' => Alignment::VERTICAL_CENTER,
-                ],
-            ]);
-        }
-
-        return $sheet;
-    }
-
-    public function columnWidths(): array
+    public function registerEvents(): array
     {
         return [
-            'A' => 8,  // No
-            'B' => 15, // Tanggal
-            'C' => 15, // Jumlah Hutang
-            'D' => 15, // Dibayar
-            'E' => 15, // Sisa
-            'F' => 15, // Status
-            'G' => 30, // Catatan
+            AfterSheet::class => function(AfterSheet $event) {
+                // Get the data to calculate totals
+                $debts = $this->collection();
+                $totalAmount = $debts->sum('amount');
+                $totalPaid = $debts->sum('paid_amount');
+                $totalRemaining = $debts->sum('remaining_amount');
+                
+                // Get the last row number
+                $lastDataRow = $debts->count() + 1; // +1 for header row
+                
+                // Add total row
+                $event->sheet->getDelegate()->setCellValue('A' . ($lastDataRow + 1), 'TOTAL');
+                $event->sheet->getDelegate()->setCellValue('C' . ($lastDataRow + 1), $totalAmount);
+                $event->sheet->getDelegate()->setCellValue('D' . ($lastDataRow + 1), $totalPaid);
+                $event->sheet->getDelegate()->setCellValue('E' . ($lastDataRow + 1), $totalRemaining);
+                
+                // Style total row
+                $event->sheet->getDelegate()->getStyle('A' . ($lastDataRow + 1) . ':G' . ($lastDataRow + 1))
+                    ->getFont()->setBold(true);
+                
+                // Add borders to all data including total row
+                $event->sheet->getDelegate()->getStyle('A1:G' . ($lastDataRow + 1))
+                    ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                
+                // Auto-size columns
+                foreach (range('A', 'G') as $column) {
+                    $event->sheet->getDelegate()->getColumnDimension($column)->setAutoSize(true);
+                }
+
+                // Center align all cells
+                $event->sheet->getDelegate()->getStyle('A1:G' . ($lastDataRow + 1))
+                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            }
         ];
     }
-} 
+}
